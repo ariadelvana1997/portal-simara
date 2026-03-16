@@ -1,10 +1,12 @@
 "use client";
 import React, { createContext, useContext, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 const ThemeContext = createContext<any>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<'light' | 'dark' | 'read'>('light');
+  const [isLocked, setIsLocked] = useState(false);
 
   const themes = {
     light: { bg: "bg-gray-50", sidebar: "bg-white", text: "text-gray-900", textMuted: "text-gray-500", border: "border-gray-200", hover: "hover:bg-gray-100", card: "bg-white" },
@@ -15,7 +17,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const cur = themes[mode];
 
   return (
-    <ThemeContext.Provider value={{ mode, setMode, cur }}>
+    <ThemeContext.Provider value={{ mode, setMode, cur, isLocked, setIsLocked }}>
       {children}
     </ThemeContext.Provider>
   );

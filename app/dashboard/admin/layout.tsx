@@ -9,9 +9,13 @@ const ThemeContext = createContext<any>(null);
 // Hook useTheme untuk digunakan di page.tsx
 export const useTheme = () => {
   const context = useContext(ThemeContext);
+  // Fallback agar tidak error saat proses build/prerender di Vercel
   if (!context) {
     return {
-      cur: { bg: "bg-gray-50", sidebar: "bg-white", text: "text-gray-900", textMuted: "text-gray-500", border: "border-gray-200", hover: "hover:bg-gray-100", card: "bg-white" }
+      cur: { bg: "bg-gray-50", sidebar: "bg-white", text: "text-gray-900", textMuted: "text-gray-500", border: "border-gray-200", hover: "hover:bg-gray-100", card: "bg-white" },
+      mode: 'light',
+      setMode: () => {},
+      setIsLocked: () => {}
     };
   }
   return context;
@@ -44,7 +48,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     e.preventDefault();
     setIsVerifying(true);
     
-    // Ambil email user yang sedang login
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user?.email) {
@@ -72,18 +75,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const cur = themes[mode];
 
   return (
-    <ThemeContext.Provider value={{ cur, mode, setMode }}>
+    <ThemeContext.Provider value={{ cur, mode, setMode, setIsLocked }}>
       <div className={`min-h-screen flex transition-colors duration-500 ${cur.bg} ${cur.text}`}>
         
         {/* --- XPRIVASI LOCK SCREEN OVERLAY --- */}
         {isLocked && (
           <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
-            <div className="w-full max-w-sm text-center space-y-8">
+            <div className="w-full max-w-sm text-center space-y-8 text-white">
               <div className="space-y-3">
-                <div className="w-20 h-20 bg-blue-600 rounded-[2.5rem] mx-auto flex items-center justify-center shadow-2xl shadow-blue-500/40 rotate-12">
+                <div className="w-20 h-20 bg-blue-600 rounded-[2.5rem] mx-auto flex items-center justify-center shadow-2xl shadow-blue-500/40 rotate-12 transition-transform hover:rotate-0 duration-500">
                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 </div>
-                <h2 className="text-white text-3xl font-black tracking-tighter">Xprivasi Active</h2>
+                <h2 className="text-3xl font-black tracking-tighter">Xprivasi Active</h2>
                 <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em]">Locked by Samsung S26 Ultra Tech</p>
               </div>
 
@@ -124,7 +127,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           will-change-[width,transform]
         `}>
           <div className={`h-16 flex items-center px-6 border-b ${cur.border} overflow-hidden`}>
-            <span className="font-black text-blue-600 tracking-tighter text-xl">
+            <span className="font-black text-blue-600 tracking-tighter text-xl whitespace-nowrap">
               {isCollapsed ? 'S' : 'SIMARA e-Rapor v1.0'}
             </span>
           </div>
@@ -163,11 +166,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="flex items-center gap-4">
                {/* MODES + XPRIVASI BUTTON */}
                <div className={`flex items-center ${cur.bg} p-1 rounded-xl border ${cur.border} gap-0.5`}>
-                  <button onClick={() => setMode('light')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${mode === 'light' ? 'bg-blue-600 text-white shadow-md' : cur.textMuted}`}>L</button>
-                  <button onClick={() => setMode('dark')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${mode === 'dark' ? 'bg-blue-600 text-white shadow-md' : cur.textMuted}`}>D</button>
-                  <button onClick={() => setMode('read')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${mode === 'read' ? 'bg-blue-600 text-white shadow-md' : cur.textMuted}`}>R</button>
+                  <button onClick={() => setMode('light')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${mode === 'light' ? 'bg-blue-600 text-white shadow-md' : 'opacity-40 hover:opacity-100'}`}>L</button>
+                  <button onClick={() => setMode('dark')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${mode === 'dark' ? 'bg-blue-600 text-white shadow-md' : 'opacity-40 hover:opacity-100'}`}>D</button>
+                  <button onClick={() => setMode('read')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${mode === 'read' ? 'bg-blue-600 text-white shadow-md' : 'opacity-40 hover:opacity-100'}`}>R</button>
                   
-                  {/* TOMBOL XPRIVASI */}
                   <div className="w-[1px] h-4 bg-gray-300 mx-1 opacity-50"></div>
                   <button 
                     onClick={() => setIsLocked(true)}
