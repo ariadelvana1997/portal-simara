@@ -9,7 +9,6 @@ const ThemeContext = createContext<any>(null);
 // Hook useTheme untuk digunakan di page.tsx
 export const useTheme = () => {
   const context = useContext(ThemeContext);
-  // Fallback agar tidak error saat proses build/prerender
   if (!context) {
     return {
       cur: { bg: "bg-gray-50", sidebar: "bg-white", text: "text-gray-900", textMuted: "text-gray-500", border: "border-gray-200", hover: "hover:bg-gray-100", card: "bg-white" }
@@ -27,11 +26,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mode, setMode] = useState<'light' | 'dark' | 'read'>('light');
+  
+  // --- STATE XPRIVASI ---
+  const [isLocked, setIsLocked] = useState(false);
+  const [unlockPass, setUnlockPass] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  
   const router = useRouter();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
+  };
+
+  // Logika Verifikasi Password Xprivasi
+  const handleUnlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsVerifying(true);
+    
+    // Ambil email user yang sedang login
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user?.email) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: unlockPass,
+      });
+
+      if (!error) {
+        setIsLocked(false);
+        setUnlockPass('');
+      } else {
+        alert("Password Salah! Akses Xprivasi Ditolak.");
+      }
+    }
+    setIsVerifying(false);
   };
 
   const themes = {
@@ -46,6 +75,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <ThemeContext.Provider value={{ cur, mode, setMode }}>
       <div className={`min-h-screen flex transition-colors duration-500 ${cur.bg} ${cur.text}`}>
         
+        {/* --- XPRIVASI LOCK SCREEN OVERLAY --- */}
+        {isLocked && (
+          <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
+            <div className="w-full max-w-sm text-center space-y-8">
+              <div className="space-y-3">
+                <div className="w-20 h-20 bg-blue-600 rounded-[2.5rem] mx-auto flex items-center justify-center shadow-2xl shadow-blue-500/40 rotate-12">
+                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <h2 className="text-white text-3xl font-black tracking-tighter">Xprivasi Active</h2>
+                <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em]">Locked by Samsung S26 Ultra Tech</p>
+              </div>
+
+              <form onSubmit={handleUnlock} className="space-y-4">
+                <input 
+                  type="password" 
+                  autoFocus
+                  value={unlockPass}
+                  onChange={(e) => setUnlockPass(e.target.value)}
+                  placeholder="Password Login" 
+                  className="w-full bg-gray-900 border border-gray-800 rounded-2xl px-6 py-4 text-white text-center text-lg focus:outline-none focus:border-blue-600 transition-all font-bold placeholder:text-gray-700"
+                />
+                <button 
+                  disabled={isVerifying}
+                  className="w-full bg-white text-black font-black py-4 rounded-2xl hover:bg-blue-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {isVerifying ? 'VERIFIKASI...' : 'BUKA AKSES'}
+                </button>
+              </form>
+              <button onClick={handleLogout} className="text-gray-700 text-[10px] font-black uppercase tracking-[0.2em] hover:text-red-500 transition-colors">Emergency Logout</button>
+            </div>
+          </div>
+        )}
+
         {/* MOBILE OVERLAY */}
         {isSidebarOpen && (
           <div className="fixed inset-0 bg-black/40 z-40 md:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)}></div>
@@ -80,7 +142,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </aside>
 
-        {/* MAIN (DITAMBAHKAN TRANSISI DI SINI AGAR SINKRON DENGAN SIDEBAR) */}
+        {/* MAIN */}
         <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
           <header className={`h-16 flex items-center justify-between px-4 md:px-8 border-b ${cur.border} ${cur.sidebar} transition-colors duration-500`}>
             <div className="flex items-center gap-4">
@@ -99,10 +161,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
 
             <div className="flex items-center gap-4">
-               <div className={`flex ${cur.bg} p-1 rounded-xl border ${cur.border}`}>
+               {/* MODES + XPRIVASI BUTTON */}
+               <div className={`flex items-center ${cur.bg} p-1 rounded-xl border ${cur.border} gap-0.5`}>
                   <button onClick={() => setMode('light')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${mode === 'light' ? 'bg-blue-600 text-white shadow-md' : cur.textMuted}`}>L</button>
                   <button onClick={() => setMode('dark')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${mode === 'dark' ? 'bg-blue-600 text-white shadow-md' : cur.textMuted}`}>D</button>
                   <button onClick={() => setMode('read')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${mode === 'read' ? 'bg-blue-600 text-white shadow-md' : cur.textMuted}`}>R</button>
+                  
+                  {/* TOMBOL XPRIVASI */}
+                  <div className="w-[1px] h-4 bg-gray-300 mx-1 opacity-50"></div>
+                  <button 
+                    onClick={() => setIsLocked(true)}
+                    className="px-3 py-1.5 rounded-lg text-[10px] font-black bg-red-500/10 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                  >
+                    X
+                  </button>
                </div>
                
                <div className={`w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white text-xs font-black shadow-lg shadow-blue-500/30`}>
