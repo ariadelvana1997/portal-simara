@@ -87,7 +87,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 </div>
                 <h2 className="text-3xl font-black tracking-tighter">Xprivasi Active</h2>
-                <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em]">Locked by Samsung S26 Ultra Tech</p>
+                <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em]">INI PRIVASI YA!</p>
               </div>
 
               <form onSubmit={handleUnlock} className="space-y-4">
