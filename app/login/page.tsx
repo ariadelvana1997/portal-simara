@@ -1,11 +1,51 @@
 "use client";
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '../../lib/supabase';
 
 export default function LoginPage() {
-  // State untuk mengontrol mode warna
+  // State bawaan dari kodingan DELVANA
   const [mode, setMode] = useState<'light' | 'dark' | 'read'>('light');
 
-  // Konfigurasi skema warna berdasarkan mode
+  // State tambahan untuk Login Supabase
+  const router = useRouter();
+  const [username, setUsername] = useState(''); // Kita gunakan username/nip
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Fungsi Login
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    // Proses login (Kita asumsikan username yang diinput adalah bagian dari email @simara.id)
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: username.includes('@') ? username : `${username}@simara.id`,
+      password: password,
+    });
+
+    if (error) {
+      alert("Gagal Masuk: " + error.message);
+      setLoading(false);
+      return;
+    }
+
+    // Ambil Role dari tabel profiles
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user?.id)
+      .single();
+
+    if (profile) {
+      router.push(`/dashboard/${profile.role}`);
+    } else {
+      alert("Profil tidak ditemukan. Hubungi Admin.");
+      setLoading(false);
+    }
+  };
+
+  // Konfigurasi skema warna (Tetap asli seperti kodingan DELVANA)
   const themes = {
     light: {
       container: "bg-white text-slate-900",
@@ -87,28 +127,35 @@ export default function LoginPage() {
               <p className="opacity-60 text-sm">Gunakan akun Anda untuk mengakses sistem.</p>
             </div>
 
-            <form className="space-y-6">
+            <form onSubmit={handleLogin} className="space-y-6">
               <div className="relative group">
                 <input 
                   type="text" 
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className={`w-full py-3 bg-transparent border-b-2 outline-none transition-all placeholder:text-slate-400 ${currentTheme.inputBorder} focus:border-blue-600`}
                   placeholder="NIP / Username"
+                  required
                 />
               </div>
 
               <div className="relative group">
                 <input 
                   type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className={`w-full py-3 bg-transparent border-b-2 outline-none transition-all placeholder:text-slate-400 ${currentTheme.inputBorder} focus:border-blue-600`}
                   placeholder="Password"
+                  required
                 />
               </div>
 
               <button 
                 type="submit" 
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all duration-300 shadow-lg shadow-blue-200/20 active:scale-95"
+                disabled={loading}
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all duration-300 shadow-lg shadow-blue-200/20 active:scale-95 disabled:opacity-50"
               >
-                Masuk ke Aplikasi
+                {loading ? "Menghubungkan..." : "Masuk ke Aplikasi"}
               </button>
             </form>
 

@@ -1,0 +1,1 @@
+export default function Guru() { return <div className="p-10"><h1>Dashboard Guru</h1><p>Input Nilai Formatif & Sumatif.</p></div> }

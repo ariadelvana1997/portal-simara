@@ -1,0 +1,1 @@
+export default function Siswa() { return <div className="p-10"><h1>Dashboard Siswa</h1><p>Lihat Capaian Hasil Belajar.</p></div> }

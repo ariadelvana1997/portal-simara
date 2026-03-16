@@ -1,0 +1,1 @@
+export default function Wali() { return <div className="p-10"><h1>Dashboard Walikelas</h1><p>Rekapitulasi Absensi & Kelas.</p></div> }
