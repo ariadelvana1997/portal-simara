@@ -12,11 +12,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     read: { bg: "bg-[#F4ECD8]", sidebar: "bg-[#EFE5CD]", text: "text-[#5B4636]", textMuted: "text-[#8C7662]", border: "border-[#E2D1B3]", hover: "hover:bg-[#E8D9B5]", card: "bg-[#F9F3E5]" }
   };
 
+  const cur = themes[mode];
+
   return (
-    <ThemeContext.Provider value={{ mode, setMode, cur: themes[mode] }}>
+    <ThemeContext.Provider value={{ mode, setMode, cur }}>
       {children}
     </ThemeContext.Provider>
   );
 }
 
-export const useTheme = () => useContext(ThemeContext);
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) return { cur: { bg: "bg-gray-50", text: "text-gray-900", card: "bg-white", border: "border-gray-200", textMuted: "text-gray-500", hover: "hover:bg-gray-100" } };
+  return context;
+};

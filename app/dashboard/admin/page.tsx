@@ -1,8 +1,8 @@
 "use client";
 import React from 'react';
-import { useTheme } from './layout'; // Pastikan path import benar
+import { useTheme } from './layout'; // Mengambil context dari layout
 
-// --- PREMIUM SVG ICONS (Anti-AI Look) ---
+// --- PREMIUM SVG ICONS (Gaya Clean & Profesional) ---
 const IconSiswa = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
 );
@@ -101,7 +101,7 @@ export default function AdminPage() {
             ].map((user, i) => (
               <div key={i} className="flex items-center gap-3 group">
                 <div className="relative">
-                  <div className={`w-10 h-10 rounded-xl ${i === 0 ? 'bg-blue-600 text-white' : 'bg-blue-600/10 text-blue-600'} flex items-center justify-center font-bold transition-transform group-hover:rotate-3`}>
+                  <div className={`w-10 h-10 rounded-xl ${i === 0 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-blue-600/10 text-blue-600'} flex items-center justify-center font-bold transition-transform group-hover:rotate-3`}>
                     {user.name[0]}
                   </div>
                   <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 ${i < 3 ? 'bg-green-500' : 'bg-gray-300'} border-2 ${cur.card.includes('white') ? 'border-white' : 'border-gray-900'} rounded-full`}></div>

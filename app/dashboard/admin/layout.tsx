@@ -5,7 +5,18 @@ import { supabase } from '@/lib/supabase';
 
 // --- BAGIAN CONTEXT UNTUK FIX BUG CLONE ELEMENT ---
 const ThemeContext = createContext<any>(null);
-export const useTheme = () => useContext(ThemeContext);
+
+// Hook useTheme untuk digunakan di page.tsx
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  // Fallback agar tidak error saat proses build/prerender
+  if (!context) {
+    return {
+      cur: { bg: "bg-gray-50", sidebar: "bg-white", text: "text-gray-900", textMuted: "text-gray-500", border: "border-gray-200", hover: "hover:bg-gray-100", card: "bg-white" }
+    };
+  }
+  return context;
+};
 
 // Icons
 const IconDashboard = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" /></svg>;
@@ -32,7 +43,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const cur = themes[mode];
 
   return (
-    <ThemeContext.Provider value={{ cur }}>
+    <ThemeContext.Provider value={{ cur, mode, setMode }}>
       <div className={`min-h-screen flex transition-colors duration-500 ${cur.bg} ${cur.text}`}>
         
         {/* MOBILE OVERLAY */}
@@ -69,7 +80,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </aside>
 
-        {/* MAIN (DITAMBAHKAN TRANSISI DI SINI) */}
+        {/* MAIN (DITAMBAHKAN TRANSISI DI SINI AGAR SINKRON DENGAN SIDEBAR) */}
         <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
           <header className={`h-16 flex items-center justify-between px-4 md:px-8 border-b ${cur.border} ${cur.sidebar} transition-colors duration-500`}>
             <div className="flex items-center gap-4">
