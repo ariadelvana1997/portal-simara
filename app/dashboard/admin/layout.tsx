@@ -42,10 +42,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* SIDEBAR */}
         <aside className={`
-          fixed inset-y-0 left-0 z-50 border-r transform transition-all duration-300 ease-in-out md:relative md:translate-x-0
+          fixed inset-y-0 left-0 z-50 border-r 
+          transition-[width,transform] duration-300 ease-in-out 
+          md:relative md:translate-x-0
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           ${isCollapsed ? 'md:w-20' : 'md:w-64'}
           ${cur.sidebar} ${cur.border}
+          will-change-[width,transform]
         `}>
           <div className={`h-16 flex items-center px-6 border-b ${cur.border} overflow-hidden`}>
             <span className="font-black text-blue-600 tracking-tighter text-xl">
@@ -66,8 +69,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </aside>
 
-        {/* MAIN */}
-        <div className="flex-1 flex flex-col min-w-0">
+        {/* MAIN (DITAMBAHKAN TRANSISI DI SINI) */}
+        <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
           <header className={`h-16 flex items-center justify-between px-4 md:px-8 border-b ${cur.border} ${cur.sidebar} transition-colors duration-500`}>
             <div className="flex items-center gap-4">
               <button 
@@ -99,7 +102,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <main className="p-4 md:p-8 overflow-y-auto">
             <div className="max-w-7xl mx-auto">
-               {/* FIX: Tidak lagi menggunakan cloneElement */}
                {children}
             </div>
           </main>
