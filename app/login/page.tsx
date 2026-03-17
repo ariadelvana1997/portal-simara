@@ -38,7 +38,7 @@ export default function LoginPage() {
       .single();
 
     if (profile) {
-      router.push(`/dashboard/${profile.role}`);
+router.push(`/dashboard/${profile.role.toLowerCase()}`);
     } else {
       alert("Profil tidak ditemukan. Hubungi Admin.");
       setLoading(false);
