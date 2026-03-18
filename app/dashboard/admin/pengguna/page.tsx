@@ -45,9 +45,10 @@ export default function MasterPengguna() {
     setLoading(false);
   };
 
-  // Filter users berdasarkan role yang ada di array roles mereka
+  // Filter users berdasarkan role
   const filteredUsers = users.filter(user => {
-    const userRoles = Array.isArray(user.roles) ? user.roles : [user.role];
+    // Pastikan roles ada dan berbentuk array, jika tidak jadikan array kosong
+    const userRoles = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
     return userRoles.some((r: string) => r?.toLowerCase() === activeTab.toLowerCase());
   });
 
@@ -64,27 +65,40 @@ export default function MasterPengguna() {
     e.preventDefault();
     if (formData.roles.length === 0) return alert("Pilih minimal satu role!");
 
-    const payload = {
+    // Payload dasar
+    const payload: any = {
       full_name: formData.full_name,
       email: formData.email,
-      roles: formData.roles // Menggunakan array untuk multi-role
+      roles: formData.roles 
     };
 
+    let result;
+    
     if (isEditing) {
-      const { error } = await supabase.from('profiles').update(payload).eq('id', formData.id);
-      if (!error) alert("Berhasil Update!");
+      // Update data yang sudah ada (ID sudah tersedia)
+      result = await supabase.from('profiles').update(payload).eq('id', formData.id);
     } else {
-      const { error } = await supabase.from('profiles').insert([payload]);
-      if (!error) alert("User Berhasil Ditambahkan!");
+      // --- LOGIKA MANDIRI (OPSIONAL TAPI BAGUS) ---
+      // Generate UUID baru jika user baru untuk mencegah "null value in column id"
+      payload.id = crypto.randomUUID(); 
+      result = await supabase.from('profiles').insert([payload]);
     }
-    setModalOpen(false);
-    fetchUsers();
+
+    if (result.error) {
+      console.error("Database Error:", result.error);
+      alert("Gagal Simpan Data: " + result.error.message);
+    } else {
+      alert(isEditing ? "Berhasil Update!" : "User Berhasil Ditambahkan!");
+      setModalOpen(false);
+      fetchUsers(); // Refresh daftar
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (confirm("Hapus pengguna ini secara permanen?")) {
       const { error } = await supabase.from('profiles').delete().eq('id', id);
-      if (!error) fetchUsers();
+      if (error) alert("Gagal Hapus: " + error.message);
+      else fetchUsers();
     }
   };
 
@@ -96,7 +110,7 @@ export default function MasterPengguna() {
         email: user.email, 
         full_name: user.full_name, 
         password: '', 
-        roles: Array.isArray(user.roles) ? user.roles : [user.role] 
+        roles: Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []) 
       });
     } else {
       setIsEditing(false);
@@ -110,12 +124,12 @@ export default function MasterPengguna() {
       {/* Header Halaman */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter">Master Pengguna</h1>
+          <h1 className="text-3xl font-black tracking-tighter uppercase ">Master Pengguna</h1>
           <p className={`${cur.textMuted} text-sm font-medium`}>Kelola akun dan otoritas login SIMARA.</p>
         </div>
         <button 
           onClick={() => openModal()}
-          className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-600/30 active:scale-95 transition-all"
+          className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-600/30 active:scale-95 transition-all"
         >
           <IconPlus /> Tambah Pengguna
         </button>
@@ -146,13 +160,13 @@ export default function MasterPengguna() {
           </thead>
           <tbody className="divide-y divide-inherit">
             {loading ? (
-              <tr><td colSpan={3} className="p-20 text-center animate-pulse font-bold opacity-30">Sinkronisasi Database...</td></tr>
+              <tr><td colSpan={3} className="p-20 text-center animate-pulse font-bold opacity-30  uppercase">Sinkronisasi Database...</td></tr>
             ) : filteredUsers.length === 0 ? (
-              <tr><td colSpan={3} className="p-20 text-center font-bold opacity-30 italic">Belum ada data untuk kategori {activeTab}.</td></tr>
+              <tr><td colSpan={3} className="p-20 text-center font-bold opacity-30  uppercase">Belum ada data untuk kategori {activeTab}.</td></tr>
             ) : filteredUsers.map((user) => (
               <tr key={user.id} className={`${cur.hover} transition-colors group`}>
                 <td className="px-8 py-5">
-                  <div className="font-bold tracking-tight text-sm">{user.full_name}</div>
+                  <div className="font-bold tracking-tight text-sm uppercase">{user.full_name}</div>
                   <div className="text-[10px] opacity-50 font-bold">{user.email}</div>
                 </td>
                 <td className="px-8 py-5">
@@ -174,28 +188,27 @@ export default function MasterPengguna() {
         </table>
       </div>
 
-      {/* MODAL FORM (Samsung Style Multi-Role) */}
+      {/* MODAL FORM */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className={`${cur.card} w-full max-w-lg rounded-[2.5rem] border ${cur.border} p-10 shadow-2xl animate-in zoom-in-95 duration-500`}>
-            <h2 className="text-2xl font-black tracking-tighter mb-1">{isEditing ? 'Perbarui' : 'Daftarkan'} Pengguna</h2>
-            <p className={`${cur.textMuted} text-[10px] font-black uppercase tracking-[0.2em] mb-8`}>Multi-role Account Configuration</p>
+            <h2 className="text-2xl font-black tracking-tighter mb-1  uppercase">{isEditing ? 'Perbarui' : 'Daftarkan'} Pengguna</h2>
+            <p className={`${cur.textMuted} text-[10px] font-black uppercase tracking-[0.2em] mb-8`}>Account Configuration</p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase ml-1 opacity-50">Nama Lengkap</label>
-                  <input required value={formData.full_name} onChange={(e) => setFormData({...formData, full_name: e.target.value})} className={`w-full ${cur.bg} border ${cur.border} px-5 py-4 rounded-2xl focus:outline-none focus:border-blue-600 transition-all font-bold text-sm`} placeholder="Nama Guru/Siswa" />
+                  <label className="text-[10px] font-black uppercase ml-1 opacity-50 tracking-widest">Nama Lengkap</label>
+                  <input required value={formData.full_name} onChange={(e) => setFormData({...formData, full_name: e.target.value})} className={`w-full ${cur.bg} border ${cur.border} px-5 py-4 rounded-2xl focus:outline-none focus:border-blue-600 transition-all font-bold text-sm`} placeholder="Nama Lengkap" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase ml-1 opacity-50">Email Address</label>
-                  <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className={`w-full ${cur.bg} border ${cur.border} px-5 py-4 rounded-2xl focus:outline-none focus:border-blue-600 transition-all font-bold text-sm`} placeholder="user@sekolah.com" />
+                  <label className="text-[10px] font-black uppercase ml-1 opacity-50 tracking-widest">Email Address</label>
+                  <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className={`w-full ${cur.bg} border ${cur.border} px-5 py-4 rounded-2xl focus:outline-none focus:border-blue-600 transition-all font-bold text-sm`} placeholder="user@mail.com" />
                 </div>
               </div>
 
-              {/* ROLE SELECTION (Multi-choice) */}
               <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase ml-1 opacity-50">Pilih Role (Bisa lebih dari satu)</label>
+                <label className="text-[10px] font-black uppercase ml-1 opacity-50 tracking-widest">Pilih Akses Role</label>
                 <div className="grid grid-cols-2 gap-3">
                   {availableRoles.map(role => (
                     <div 
@@ -214,7 +227,7 @@ export default function MasterPengguna() {
 
               {!isEditing && (
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase ml-1 opacity-50">Password Default</label>
+                  <label className="text-[10px] font-black uppercase ml-1 opacity-50 tracking-widest">Password Default</label>
                   <input type="password" required className={`w-full ${cur.bg} border ${cur.border} px-5 py-4 rounded-2xl focus:outline-none focus:border-blue-600 transition-all font-bold text-sm`} placeholder="Minimal 6 karakter" />
                 </div>
               )}

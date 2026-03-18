@@ -111,7 +111,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  if (loading) return <div className={`min-h-screen ${cur.bg} flex items-center justify-center font-black italic opacity-20`}>SINKRONISASI SISTEM...</div>;
+  if (loading) return <div className={`min-h-screen ${cur.bg} flex items-center justify-center font-black  opacity-20`}>SINKRONISASI SISTEM...</div>;
 
   return (
     <ThemeContext.Provider value={{ cur, mode, setMode, setIsLocked, profile }}>
@@ -164,7 +164,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 { label: "Data Mata Pelajaran", href: "/dashboard/admin/referensi/mapel", icon: <SubIcon d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/> },
                 { label: "Data Ekstrakurikuler", href: "/dashboard/admin/referensi/ekskul", icon: <SubIcon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/> },
                 { label: "Data Kelompok Mapel", href: "/dashboard/admin/referensi/kelompok", icon: <SubIcon d="M12 2L2 7l10 5 10-5-10-5z M2 17l10 5 10-5 M2 12l10 5 10-5"/> },
-                { label: "Data Mapping Rapor", href: "/dashboard/admin/referensi/mapping", icon: <SubIcon d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3m-1 5h8"/> },
+                { label: "Data Mapping Rapor", href: "/dashboard/admin/referensi/mapping-rapor", icon: <SubIcon d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3m-1 5h8"/> },
                 { label: "Data Logo & TTD", href: "/dashboard/admin/referensi/logo", icon: <SubIcon d="M12 20h9 M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/> },
                 { label: "Data Tanggal Rapor", href: "/dashboard/admin/referensi/tanggal", icon: <SubIcon d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/> },
                 { label: "Foto Siswa", href: "/dashboard/admin/referensi/foto", icon: <SubIcon d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/> }
@@ -184,16 +184,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             <NavGroup icon={<IconEdit />} label="Master Penilaian" isCollapsed={isCollapsed} cur={cur} isOpen={openGroup === 'nilai'} onClick={() => toggleGroup('nilai')}
               submenus={[
-                { label: "Penilaian", href: "/dashboard/admin/nilai/input", icon: <SubIcon d="M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/> },
-                { label: "Ekstrakurikuler", href: "/dashboard/admin/nilai/ekskul", icon: <SubIcon d="M13 10V3L4 14h7v7l9-11h-7z"/> },
-                { label: "Absensi Catatan", href: "/dashboard/admin/nilai/absensi", icon: <SubIcon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/> },
-                { label: "Leger", href: "/dashboard/admin/nilai/leger", icon: <SubIcon d="M3 3h18v18H3z M3 9h18 M3 15h18 M9 3v18 M15 3v18"/> }
+                { label: "Penilaian", href: "/dashboard/admin/nilai", icon: <SubIcon d="M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/> },
+                { label: "Ekstrakurikuler", href: "/dashboard/admin/ekskul-nilai", icon: <SubIcon d="M13 10V3L4 14h7v7l9-11h-7z"/> },
+                { label: "Absensi Catatan", href: "/dashboard/admin/absensi", icon: <SubIcon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/> },
+                { label: "Leger", href: "/dashboard/admin/legger", icon: <SubIcon d="M3 3h18v18H3z M3 9h18 M3 15h18 M9 3v18 M15 3v18"/> }
               ]}
             />
 
             <NavGroup icon={<IconPrinter />} label="Master Cetak Rapor" isCollapsed={isCollapsed} cur={cur} isOpen={openGroup === 'cetak'} onClick={() => toggleGroup('cetak')}
               submenus={[
-                { label: "Rapor Biasa", href: "/dashboard/admin/cetak/biasa", icon: <SubIcon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/> },
+                { label: "Rapor Biasa", href: "/dashboard/admin/rapor", icon: <SubIcon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/> },
                 { label: "Rapor P5", href: "/dashboard/admin/cetak/p5", icon: <SubIcon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/> },
                 { label: "Rapor Kokulikuler", href: "/dashboard/admin/cetak/kokul", icon: <SubIcon d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/> }
               ]}
