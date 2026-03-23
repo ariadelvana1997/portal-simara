@@ -1,7 +1,8 @@
 "use client";
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from './layout'; // Mengambil context dari layout
+import { supabase } from '@/lib/supabase';
 
 // --- PREMIUM SVG ICONS (Gaya Clean & Profesional) ---
 const IconSiswa = () => (
@@ -31,22 +32,52 @@ export default function AdminPage() {
   const profile = themeContext?.profile;
   const loading = themeContext?.loading;
 
-  // --- SECURITY CHECK: HANYA ADMIN YANG BOLEH DI SINI ---
+  // --- STATE UNTUK STATISTIK REAL-TIME ---
+  const [stats, setStats] = useState({
+    siswa: 0,
+    guru: 0,
+    kelas: 0,
+    mapel: 0
+  });
+
+  // --- FETCH DATA STATISTIK ---
+  const fetchStats = async () => {
+    try {
+      // 1. Hitung Siswa
+      const { count: s } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).contains('roles', ['Siswa']);
+      // 2. Hitung Guru & Walikelas
+      const { count: g } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).or('roles.cs.{"Guru"},roles.cs.{"Walikelas"}');
+      // 3. Hitung Kelas
+      const { count: k } = await supabase.from('classes').select('*', { count: 'exact', head: true });
+      // 4. Hitung Mapel
+      const { count: m } = await supabase.from('subjects').select('*', { count: 'exact', head: true });
+
+      setStats({
+        siswa: s || 0,
+        guru: g || 0,
+        kelas: k || 0,
+        mapel: m || 0
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  };
+
+  // --- SECURITY CHECK & INITIAL FETCH ---
   useEffect(() => {
     if (!loading && profile) {
-      // Cek roles (array) atau role (string cadangan)
       const userRoles = profile.roles || [profile.role];
       const isAdmin = userRoles.some((r: string) => r?.toLowerCase() === 'admin');
       
       if (!isAdmin) {
-        // Jika bukan admin, pentalin ke dashboard yang sesuai rolenya
         const target = userRoles[0]?.toLowerCase() || 'siswa';
         router.push(`/dashboard/${target}`);
+      } else {
+        fetchStats(); // Hanya fetch jika admin
       }
     }
   }, [profile, loading, router]);
 
-  // Jika sedang loading atau bukan admin, tampilkan layar kosong/loading tipis
   if (loading || !profile) return <div className={`min-h-screen ${cur.bg} flex items-center justify-center font-black italic opacity-20 uppercase tracking-widest`}>Memverifikasi Akses...</div>;
 
   return (
@@ -59,13 +90,13 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* 1. WIDGET UTAMA (Stats) */}
+      {/* 1. WIDGET UTAMA (Stats - Dihubungkan ke Database) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Total Siswa', value: '856', icon: <IconSiswa />, color: 'text-blue-600', shadow: 'shadow-blue-500/10' },
-          { label: 'Total Guru', value: '45', icon: <IconGuru />, color: 'text-green-600', shadow: 'shadow-green-500/10' },
-          { label: 'Total Kelas', value: '24', icon: <IconKelas />, color: 'text-purple-600', shadow: 'shadow-purple-500/10' },
-          { label: 'Total Mapel', value: '18', icon: <IconMapel />, color: 'text-orange-600', shadow: 'shadow-orange-500/10' },
+          { label: 'Total Siswa', value: stats.siswa, icon: <IconSiswa />, color: 'text-blue-600', shadow: 'shadow-blue-500/10' },
+          { label: 'Total Guru', value: stats.guru, icon: <IconGuru />, color: 'text-green-600', shadow: 'shadow-green-500/10' },
+          { label: 'Total Kelas', value: stats.kelas, icon: <IconKelas />, color: 'text-purple-600', shadow: 'shadow-purple-500/10' },
+          { label: 'Total Mapel', value: stats.mapel, icon: <IconMapel />, color: 'text-orange-600', shadow: 'shadow-orange-500/10' },
         ].map((item, i) => (
           <div key={i} className={`${cur.card} p-8 rounded-[2rem] border ${cur.border} shadow-sm ${item.shadow} transition-all duration-500 group hover:-translate-y-1`}>
             <div className="flex items-center justify-between mb-4">

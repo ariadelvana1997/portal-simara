@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../../../layout';
 import { supabase } from '@/lib/supabase';
 
@@ -21,6 +21,9 @@ export default function DataKelas() {
   const [selectedClass, setSelectedClass] = useState<any>(null);
   const [classStudents, setClassStudents] = useState<any[]>([]);
   const [availableStudents, setAvailableStudents] = useState<any[]>([]);
+  
+  // --- STATE BARU UNTUK SEARCH DI MODAL ---
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -28,7 +31,6 @@ export default function DataKelas() {
 
   const fetchData = async () => {
     setLoading(true);
-    // 1. Ambil Data Kelas + Nama Walikelas + Jumlah Siswa
     const { data: classData } = await supabase
       .from('classes')
       .select(`
@@ -38,7 +40,6 @@ export default function DataKelas() {
       `)
       .order('nama_kelas', { ascending: true });
 
-    // 2. Ambil List Walikelas (Sync Master Pengguna)
     const { data: waliData } = await supabase
       .from('profiles')
       .select('id, full_name')
@@ -53,30 +54,38 @@ export default function DataKelas() {
   const openStudentManager = async (cls: any) => {
     setSelectedClass(cls);
     setIsStudentModalOpen(true);
+    setStudentSearchTerm(''); // Reset search saat buka modal
     await fetchStudentsForMapping(cls.id);
   };
 
   const fetchStudentsForMapping = async (classId: number) => {
-    // 1. Ambil Siswa yang SUDAH ada di kelas ini
     const { data: inClass } = await supabase
       .from('class_students')
-      .select(`student_id, profiles(full_name)`)
+      .select(`student_id, profiles(full_name, nisn)`)
       .eq('class_id', classId);
     
-    // 2. Ambil Siswa yang BELUM punya kelas
     const { data: allSiswa } = await supabase
       .from('profiles')
-      .select(`id, full_name, class_students(class_id)`)
+      .select(`id, full_name, nisn, class_students(class_id)`)
       .contains('roles', ['Siswa']);
 
     setClassStudents(inClass || []);
     
     if (allSiswa) {
-      // Filter: Hanya ambil siswa yang class_students-nya kosong (null atau length 0)
+      // Filter: Hanya ambil siswa yang class_students-nya kosong (Belum Berkelas)
+      // Ini bagian yang bikin pool siswa berkurang otomatis (193 -> berkurang)
       const filtered = allSiswa.filter((s: any) => (s.class_students?.length || 0) === 0);
       setAvailableStudents(filtered);
     }
   };
+
+  // --- LOGIKA FILTER SEARCH (MEMOIZED) ---
+  const filteredAvailableStudents = useMemo(() => {
+    return availableStudents.filter(s => 
+      s.full_name?.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+      s.nisn?.includes(studentSearchTerm)
+    );
+  }, [availableStudents, studentSearchTerm]);
 
   const addStudentToClass = async (studentId: string) => {
     const { error } = await supabase.from('class_students').insert({ class_id: selectedClass.id, student_id: studentId });
@@ -92,13 +101,9 @@ export default function DataKelas() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
-    // --- JURUS PEMBERSIH ID & JOIN DATA ---
     const { id, students_count, walikelas, ...rest } = formData; 
     const payload = id ? { id, ...rest } : rest;
-
     const { error } = await supabase.from('classes').upsert(payload);
-
     if (!error) {
       alert("Sempurna! Data Kelas Berhasil Disimpan! 🏫");
       setIsModalOpen(false);
@@ -173,10 +178,10 @@ export default function DataKelas() {
         </div>
       </div>
 
-      {/* MODAL MAPPING SISWA */}
+      {/* MODAL MAPPING SISWA (DENGAN SEARCH & SCROLL) */}
       {isStudentModalOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className={`${cur.card} w-full max-w-4xl rounded-[3rem] border ${cur.border} p-10 shadow-2xl flex flex-col max-h-[85vh]`}>
+          <div className={`${cur.card} w-full max-w-5xl rounded-[3rem] border ${cur.border} p-10 shadow-2xl flex flex-col h-[85vh]`}>
             <div className="flex justify-between items-start mb-8">
                 <div>
                     <h2 className="text-3xl font-black tracking-tighter ">Kelola Anggota</h2>
@@ -185,28 +190,63 @@ export default function DataKelas() {
                 <button onClick={() => { setIsStudentModalOpen(false); fetchData(); }} className="text-2xl font-black opacity-20 hover:opacity-100">×</button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 overflow-hidden">
-                <div className="flex flex-col space-y-4">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Siswa Terdaftar ({classStudents.length})</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 flex-1 overflow-hidden">
+                {/* KOLOM KIRI: TERDAFTAR */}
+                <div className="flex flex-col h-full overflow-hidden">
+                    <div className="flex justify-between items-center mb-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Siswa Terdaftar ({classStudents.length})</h4>
+                    </div>
                     <div className="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
                         {classStudents.map((s:any) => (
-                            <div key={s.student_id} className={`flex justify-between items-center p-4 rounded-2xl border ${cur.border} bg-gray-500/5 group`}>
-                                <span className="font-bold text-sm">{s.profiles.full_name}</span>
-                                <button onClick={() => removeStudentFromClass(s.student_id)} className="text-[9px] font-black text-red-500 uppercase opacity-0 group-hover:opacity-100 transition-all">Keluarkan</button>
+                            <div key={s.student_id} className={`flex justify-between items-center p-4 rounded-2xl border ${cur.border} bg-gray-500/5 group hover:border-red-500/30 transition-all`}>
+                                <div>
+                                    <p className="font-bold text-sm">{s.profiles.full_name}</p>
+                                    <p className="text-[9px] opacity-40 font-black uppercase">{s.profiles.nisn || 'Tanpa NISN'}</p>
+                                </div>
+                                <button onClick={() => removeStudentFromClass(s.student_id)} className="text-[9px] font-black text-red-500 uppercase opacity-0 group-hover:opacity-100 transition-all bg-red-500/10 px-3 py-1.5 rounded-lg">Keluarkan</button>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <div className="flex flex-col space-y-4">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 text-blue-600">Siswa Tanpa Kelas ({availableStudents.length})</h4>
+                {/* KOLOM KANAN: POOL (BELUM BERKELAS) */}
+                <div className="flex flex-col h-full overflow-hidden">
+                    <div className="flex justify-between items-center mb-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 text-blue-600">Siswa Tanpa Kelas ({availableStudents.length})</h4>
+                    </div>
+                    
+                    {/* SEARCH INPUT */}
+                    <div className="relative mb-4">
+                        <input 
+                            type="text" 
+                            placeholder="Cari nama atau NISN..." 
+                            className={`w-full bg-gray-500/5 border ${cur.border} pl-10 pr-4 py-3 rounded-xl font-bold text-xs focus:outline-none focus:border-blue-500 transition-all`}
+                            value={studentSearchTerm}
+                            onChange={(e) => setStudentSearchTerm(e.target.value)}
+                        />
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30 text-xs">🔍</span>
+                    </div>
+
                     <div className="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-                        {availableStudents.map((s:any) => (
-                            <div key={s.id} className={`flex justify-between items-center p-4 rounded-2xl border ${cur.border} hover:border-blue-500 transition-all cursor-pointer group`} onClick={() => addStudentToClass(s.id)}>
-                                <span className="font-bold text-sm">{s.full_name}</span>
+                        {filteredAvailableStudents.map((s:any) => (
+                            <div 
+                                key={s.id} 
+                                className={`flex justify-between items-center p-4 rounded-2xl border ${cur.border} hover:border-blue-500 hover:bg-blue-500/5 transition-all cursor-pointer group`} 
+                                onClick={() => addStudentToClass(s.id)}
+                            >
+                                <div>
+                                    <p className="font-bold text-sm">{s.full_name}</p>
+                                    <p className="text-[9px] opacity-40 font-black uppercase">{s.nisn || 'Tanpa NISN'}</p>
+                                </div>
                                 <span className="text-blue-600 font-black text-[18px] opacity-0 group-hover:opacity-100">+</span>
                             </div>
                         ))}
+                        {filteredAvailableStudents.length === 0 && (
+                            <div className="h-full flex flex-col items-center justify-center opacity-20 py-10">
+                                <span className="text-4xl mb-2">✨</span>
+                                <p className="font-black uppercase text-[10px] text-center">Tidak ada siswa yang ditemukan</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -214,35 +254,27 @@ export default function DataKelas() {
         </div>
       )}
 
-      {/* MODAL EDIT KELAS */}
+      {/* MODAL EDIT KELAS (TETAP SAMA) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className={`${cur.card} w-full max-w-2xl rounded-[3rem] border ${cur.border} p-10 shadow-2xl animate-in zoom-in-95 duration-300 overflow-y-auto max-h-[90vh]`}>
             <h2 className="text-3xl font-black tracking-tighter  mb-8">{formData.id ? 'Edit' : 'Tambah'} Kelas</h2>
             <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-6">
-              
               <InputItem label="Kurikulum" value={formData.kurikulum} onChange={(v:any)=>setFormData({...formData, kurikulum:v})} cur={cur} isSelect options={['Kurikulum Merdeka', 'Kurikulum 2013']} />
               <InputItem label="Nama Kelas" value={formData.nama_kelas} onChange={(v:any)=>setFormData({...formData, nama_kelas:v})} cur={cur} placeholder="Contoh: XI RPL 1" />
               <InputItem label="Jenis Rombel" value={formData.jenis_rombel} onChange={(v:any)=>setFormData({...formData, jenis_rombel:v})} cur={cur} isSelect options={['Reguler', 'Khusus', 'Praktik']} />
               <InputItem label="Tingkat" value={formData.tingkat} onChange={(v:any)=>setFormData({...formData, tingkat:v})} cur={cur} isSelect options={['X', 'XI', 'XII']} />
-              
               <div className="col-span-2 space-y-4">
                 <InputItem label="Program Keahlian" value={formData.program_keahlian} onChange={(v:any)=>setFormData({...formData, program_keahlian:v})} cur={cur} placeholder="Contoh: Pengembangan Perangkat Lunak" />
                 <InputItem label="Konsentrasi Keahlian" value={formData.konsentrasi_keahlian} onChange={(v:any)=>setFormData({...formData, konsentrasi_keahlian:v})} cur={cur} placeholder="Contoh: PPLG" />
-                
                 <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest opacity-30  ml-2">Wali Kelas (Sync Master Pengguna)</label>
-                    <select 
-                        className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl focus:outline-none focus:border-blue-500 font-bold transition-all appearance-none`}
-                        value={formData.walikelas_id || ''}
-                        onChange={(e) => setFormData({...formData, walikelas_id: e.target.value})}
-                    >
+                    <select className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl focus:outline-none focus:border-blue-500 font-bold transition-all appearance-none`} value={formData.walikelas_id || ''} onChange={(e) => setFormData({...formData, walikelas_id: e.target.value})}>
                         <option value="">-- Pilih Wali Kelas --</option>
                         {walikelas.map((w) => <option key={w.id} value={w.id}>{w.full_name}</option>)}
                     </select>
                 </div>
               </div>
-
               <div className="col-span-2 pt-6 flex gap-3">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest opacity-40 hover:opacity-100 transition-all">Batal</button>
                 <button type="submit" className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all">Simpan Kelas</button>
@@ -260,21 +292,11 @@ function InputItem({ label, value, onChange, cur, isSelect = false, options = []
     <div className="space-y-1">
       <label className="text-[10px] font-black uppercase tracking-widest opacity-30  ml-2">{label}</label>
       {isSelect ? (
-        <select 
-          className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl focus:outline-none focus:border-blue-500 font-bold transition-all appearance-none`}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        >
+        <select className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl focus:outline-none focus:border-blue-500 font-bold transition-all appearance-none`} value={value} onChange={(e) => onChange(e.target.value)}>
           {options.map((opt: any) => <option key={opt} value={opt}>{opt}</option>)}
         </select>
       ) : (
-        <input 
-          required
-          placeholder={placeholder}
-          className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl focus:outline-none focus:border-blue-500 font-bold transition-all`}
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
-        />
+        <input required placeholder={placeholder} className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl focus:outline-none focus:border-blue-500 font-bold transition-all`} value={value || ''} onChange={(e) => onChange(e.target.value)} />
       )}
     </div>
   );

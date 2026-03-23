@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@/app/providers';
 import { supabase } from '@/lib/supabase';
 
@@ -13,7 +13,8 @@ export default function DataMapel() {
   // Modal State Mapel
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<any>({
-    id: null, name: '', grade_level: 'X', teacher_id: '', class_id: '', kktp: 75
+    id: null, name: '', grade_level: 'X', teacher_id: '', class_id: '', kktp: 75,
+    selectedClasses: [] // State tambahan untuk menampung multi-select
   });
 
   // Modal State TP
@@ -42,6 +43,44 @@ export default function DataMapel() {
     setLoading(false);
   };
 
+  // --- LOGIKA DISATUIN (GROUPING) ---
+  const groupedSubjects = useMemo(() => {
+    const groups: any = {};
+    
+    subjects.forEach((s) => {
+      // Kunci pengelompokan: Nama Mapel + ID Guru
+      const key = `${s.name}-${s.teacher_id}`;
+      
+      if (!groups[key]) {
+        groups[key] = { 
+          ...s, 
+          display_classes: s.class?.nama_kelas ? [s.class.nama_kelas] : [],
+          ids_to_delete: [s.id] // Simpan semua ID untuk fitur hapus masal
+        };
+      } else {
+        if (s.class?.nama_kelas) {
+          // Tambahkan nama kelas jika belum ada di list (mencegah duplikat visual)
+          if (!groups[key].display_classes.includes(s.class.nama_kelas)) {
+            groups[key].display_classes.push(s.class.nama_kelas);
+          }
+        }
+        groups[key].ids_to_delete.push(s.id);
+      }
+    });
+
+    return Object.values(groups);
+  }, [subjects]);
+
+  // --- LOGIKA MULTI-SELECT KELAS ---
+  const toggleClassSelection = (classId: string) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      selectedClasses: prev.selectedClasses.includes(classId)
+        ? prev.selectedClasses.filter((id: string) => id !== classId)
+        : [...prev.selectedClasses, classId]
+    }));
+  };
+
   // --- LOGIKA TP ---
   const openTPManager = async (sub: any) => {
     setSelectedSubject(sub);
@@ -60,14 +99,30 @@ export default function DataMapel() {
     }
   };
 
-  // --- CRUD MAPEL ---
+  // --- CRUD MAPEL (REVISI LOGIKA MULTI-INSERT) ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { teacher, class: classObj, tp_count, ...payload } = formData;
-    const { id, ...rest } = payload;
-    const finalPayload = id ? payload : rest;
-    const { error } = await supabase.from('subjects').upsert(finalPayload);
-    if (!error) { setIsModalOpen(false); fetchData(); }
+    const { teacher, class: classObj, tp_count, selectedClasses, ...payload } = formData;
+    
+    if (payload.id) {
+      // MODE EDIT: Tetap simpan satu record
+      const { error } = await supabase.from('subjects').upsert(payload);
+      if (!error) { setIsModalOpen(false); fetchData(); }
+    } else {
+      // MODE TAMBAH BARU: Mendukung multi-select kelas
+      if (selectedClasses.length === 0) return alert("Pilih minimal satu kelas!");
+      
+      const bulkPayload = selectedClasses.map((clsId: string) => ({
+        name: payload.name,
+        grade_level: payload.grade_level,
+        teacher_id: payload.teacher_id,
+        class_id: clsId,
+        kktp: payload.kktp
+      }));
+
+      const { error } = await supabase.from('subjects').insert(bulkPayload);
+      if (!error) { setIsModalOpen(false); fetchData(); } else { alert(error.message); }
+    }
   };
 
   return (
@@ -77,7 +132,7 @@ export default function DataMapel() {
           <h1 className="text-4xl font-black tracking-tighter ">Mata Pelajaran</h1>
           <p className={`${cur.textMuted} text-sm font-medium`}>Manajemen Kurikulum, KKTP, dan Tujuan Pembelajaran.</p>
         </div>
-        <button onClick={() => { setFormData({ id: null, name: '', grade_level: 'X', teacher_id: '', class_id: '', kktp: 75 }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all">Tambah Mapel</button>
+        <button onClick={() => { setFormData({ id: null, name: '', grade_level: 'X', teacher_id: '', class_id: '', kktp: 75, selectedClasses: [] }); setIsModalOpen(true); }} className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all">Tambah Mapel</button>
       </div>
 
       <div className={`${cur.card} rounded-[3rem] border ${cur.border} overflow-hidden shadow-sm`}>
@@ -85,21 +140,28 @@ export default function DataMapel() {
           <thead>
             <tr className={`border-b ${cur.border} bg-gray-500/5`}>
               <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Mata Pelajaran</th>
-              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-center">Kelas</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Daftar Kelas</th>
               <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-center">KKTP</th>
               <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-center">TP</th>
               <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-right">Aksi</th>
             </tr>
           </thead>
           <tbody>
-            {subjects.map((s) => (
-              <tr key={s.id} className={`border-b ${cur.border} group hover:bg-gray-500/5 transition-all`}>
+            {groupedSubjects.map((s: any, idx: number) => (
+              <tr key={idx} className={`border-b ${cur.border} group hover:bg-gray-500/5 transition-all`}>
                 <td className="px-8 py-5">
-                    <p className="font-black text-lg  tracking-tight">{s.name}</p>
+                    <p className="font-black text-lg tracking-tight uppercase">{s.name}</p>
                     <p className="text-[9px] font-bold text-blue-600 uppercase tracking-widest">{s.teacher?.full_name || 'GURU KOSONG'}</p>
                 </td>
-                <td className="px-8 py-5 text-center">
-                    <span className="bg-gray-500/10 px-3 py-1 rounded-lg font-black text-[10px] opacity-60">{s.class?.nama_kelas || '-'}</span>
+                <td className="px-8 py-5">
+                    <div className="flex flex-wrap gap-1.5 max-w-[350px]">
+                        {s.display_classes.map((clsName: string, i: number) => (
+                            <span key={i} className="bg-gray-500/10 px-3 py-1 rounded-lg font-black text-[9px] opacity-60 uppercase whitespace-nowrap">
+                                {clsName}
+                            </span>
+                        ))}
+                        {s.display_classes.length === 0 && <span className="opacity-20 text-[9px] font-black italic">BELUM ADA KELAS</span>}
+                    </div>
                 </td>
                 <td className="px-8 py-5 text-center">
                     <span className="font-black text-lg text-orange-600">{s.kktp || 75}</span>
@@ -110,16 +172,29 @@ export default function DataMapel() {
                     </button>
                 </td>
                 <td className="px-8 py-5 text-right space-x-3">
-                  <button onClick={() => { setFormData(s); setIsModalOpen(true); }} className="text-[10px] font-black uppercase opacity-40 hover:opacity-100">Edit</button>
-                  <button onClick={() => { if(confirm('Hapus?')) supabase.from('subjects').delete().eq('id', s.id).then(()=>fetchData()) }} className="text-[10px] font-black uppercase text-red-600 opacity-40 hover:opacity-100">Hapus</button>
+                  <button onClick={() => { setFormData({...s, selectedClasses: [s.class_id]}); setIsModalOpen(true); }} className="text-[10px] font-black uppercase opacity-40 hover:opacity-100">Edit</button>
+                  <button 
+                    onClick={async () => { 
+                      if(confirm(`🚨 Hapus plotting ini untuk seluruh ${s.display_classes.length} kelas?`)) {
+                        await supabase.from('subjects').delete().in('id', s.ids_to_delete);
+                        fetchData();
+                      }
+                    }} 
+                    className="text-[10px] font-black uppercase text-red-600 opacity-40 hover:opacity-100"
+                  >
+                    Hapus
+                  </button>
                 </td>
               </tr>
             ))}
+            {groupedSubjects.length === 0 && !loading && (
+                <tr><td colSpan={5} className="p-20 text-center font-black opacity-10 uppercase tracking-widest">Belum ada plotting mapel</td></tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* MODAL KELOLA TP - Sama seperti sebelumnya */}
+      {/* MODAL KELOLA TP */}
       {isTPModalOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
           <div className={`${cur.card} w-full max-w-2xl rounded-[3rem] border ${cur.border} p-10 shadow-2xl flex flex-col max-h-[85vh]`}>
@@ -149,40 +224,62 @@ export default function DataMapel() {
         </div>
       )}
 
-      {/* MODAL EDIT MAPEL (DENGAN INPUT KKTP) */}
+      {/* MODAL PLOTTING MAPEL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
-           <div className={`${cur.card} w-full max-w-md rounded-[3rem] border ${cur.border} p-10 shadow-2xl`}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+           <div className={`${cur.card} w-full max-w-lg rounded-[3rem] border ${cur.border} p-10 shadow-2xl animate-in zoom-in-95 duration-300`}>
              <h2 className="text-3xl font-black tracking-tighter  mb-8">Plotting Mapel</h2>
-             <form onSubmit={handleSubmit} className="space-y-4">
+             <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid grid-cols-3 gap-3">
-                    <div className="col-span-2">
+                    <div className="col-span-2 space-y-1">
                         <label className="text-[9px] font-black uppercase opacity-30 ml-2">Nama Mapel</label>
-                        <input required className={`w-full bg-gray-500/10 border ${cur.border} px-6 py-4 rounded-2xl font-bold`} value={formData.name} onChange={(e)=>setFormData({...formData, name:e.target.value})} />
+                        <input required className={`w-full bg-gray-500/10 border ${cur.border} px-6 py-4 rounded-2xl font-bold focus:outline-none focus:border-blue-600 transition-all`} value={formData.name} onChange={(e)=>setFormData({...formData, name:e.target.value})} />
                     </div>
-                    <div>
+                    <div className="space-y-1">
                         <label className="text-[9px] font-black uppercase opacity-30 ml-2 text-orange-600">KKTP</label>
-                        <input type="number" required className={`w-full bg-orange-600/10 border border-orange-600/20 text-orange-600 px-4 py-4 rounded-2xl font-black text-center`} value={formData.kktp} onChange={(e)=>setFormData({...formData, kktp: parseInt(e.target.value)})} />
+                        <input type="number" required className={`w-full bg-orange-600/10 border border-orange-600/20 text-orange-600 px-4 py-4 rounded-2xl font-black text-center outline-none`} value={formData.kktp} onChange={(e)=>setFormData({...formData, kktp: parseInt(e.target.value)})} />
                     </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-3">
-                    <select className={`w-full bg-gray-500/10 border ${cur.border} px-6 py-4 rounded-2xl font-bold`} value={formData.grade_level} onChange={(e)=>setFormData({...formData, grade_level:e.target.value})}>
-                        {['X', 'XI', 'XII'].map(t => <option key={t} value={t}>Kelas {t}</option>)}
-                    </select>
-                    <select className={`w-full bg-gray-500/10 border ${cur.border} px-6 py-4 rounded-2xl font-bold`} value={formData.class_id || ''} onChange={(e)=>setFormData({...formData, class_id:e.target.value})}>
-                        <option value="">-- Kelas --</option>
-                        {classes.map(c => <option key={c.id} value={c.id}>{c.nama_kelas}</option>)}
+                <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase opacity-30 ml-2">Guru Pengampu</label>
+                    <select className={`w-full bg-gray-500/10 border ${cur.border} px-6 py-4 rounded-2xl font-bold focus:outline-none appearance-none`} value={formData.teacher_id || ''} onChange={(e)=>setFormData({...formData, teacher_id:e.target.value})}>
+                        <option value="">-- Pilih Guru --</option>
+                        {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
                     </select>
                 </div>
 
-                <select className={`w-full bg-gray-500/10 border ${cur.border} px-6 py-4 rounded-2xl font-bold`} value={formData.teacher_id || ''} onChange={(e)=>setFormData({...formData, teacher_id:e.target.value})}>
-                    <option value="">-- Pilih Guru --</option>
-                    {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
-                </select>
+                <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase opacity-30 ml-2">Tingkat</label>
+                    <select className={`w-full bg-gray-500/10 border ${cur.border} px-6 py-4 rounded-2xl font-bold focus:outline-none appearance-none`} value={formData.grade_level} onChange={(e)=>setFormData({...formData, grade_level:e.target.value})}>
+                        {['X', 'XI', 'XII'].map(t => <option key={t} value={t}>Kelas {t}</option>)}
+                    </select>
+                </div>
 
-                <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-[10px] shadow-xl mt-4">Simpan Data</button>
-                <button type="button" onClick={()=>setIsModalOpen(false)} className="w-full text-[10px] font-black uppercase opacity-40 mt-2">Batal</button>
+                <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase opacity-30 ml-2">Pilih Kelas ({formData.selectedClasses?.length || 0})</label>
+                    <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto p-2 border border-gray-500/5 rounded-2xl custom-scrollbar">
+                        {classes.map((c) => (
+                            <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => toggleClassSelection(c.id)}
+                                className={`py-2 px-1 rounded-xl text-[9px] font-black uppercase transition-all border ${
+                                    formData.selectedClasses.includes(c.id) 
+                                    ? 'bg-blue-600 border-blue-600 text-white shadow-md scale-95' 
+                                    : `bg-gray-500/5 border-transparent ${cur.text} opacity-60 hover:opacity-100`
+                                }`}
+                            >
+                                {c.nama_kelas}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="pt-4">
+                    <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-[10px] shadow-xl shadow-blue-500/20 active:scale-95 transition-all">Simpan Data Plotting</button>
+                    <button type="button" onClick={()=>setIsModalOpen(false)} className="w-full text-[10px] font-black uppercase opacity-40 mt-4 hover:opacity-100 transition-all">Batalkan</button>
+                </div>
              </form>
            </div>
         </div>

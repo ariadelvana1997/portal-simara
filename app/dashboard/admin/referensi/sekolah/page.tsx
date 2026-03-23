@@ -8,7 +8,7 @@ export default function DataSekolah() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [school, setSchool] = useState<any>({
-    id: 1, // Kita kunci di ID 1 untuk identitas sekolah tunggal
+    id: 1, 
     nama: '', jenjang: '', nss: '', npsn: '',
     alamat_jalan: '', desa_kelurahan: '', kecamatan: '', kabupaten: '', provinsi: '', kode_pos: '',
     telp_fax: '', email: '', website: '',
@@ -21,9 +21,7 @@ export default function DataSekolah() {
 
   const fetchSchoolData = async () => {
     setLoading(true);
-    // Kita ambil record pertama (biasanya ID 1)
     const { data, error } = await supabase.from('school_info').select('*').limit(1).maybeSingle();
-    
     if (error) {
       console.error("Gagal ambil data:", error.message);
     } else if (data) {
@@ -32,16 +30,10 @@ export default function DataSekolah() {
     setLoading(false);
   };
 
-  // --- FUNGSI SIMPAN / UPDATE ---
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
-    // Gunakan upsert: Jika ID ada dia Update, jika tidak ada dia Insert
-    const { error } = await supabase
-      .from('school_info')
-      .upsert(school);
-
+    const { error } = await supabase.from('school_info').upsert(school);
     if (error) {
       alert("Gagal menyimpan: " + error.message);
     } else {
@@ -52,22 +44,16 @@ export default function DataSekolah() {
     setLoading(false);
   };
 
-  // --- FUNGSI HAPUS (RESET DATA) ---
   const handleDelete = async () => {
-    const yakin = confirm("PERINGATAN: Apakah Anda yakin ingin MENGHAPUS semua identitas sekolah? Data ini sangat penting untuk cetak rapor.");
-    
+    const yakin = confirm("PERINGATAN: Apakah Anda yakin ingin MENGHAPUS semua identitas sekolah?");
     if (yakin) {
       setLoading(true);
-      const { error } = await supabase
-        .from('school_info')
-        .delete()
-        .eq('id', school.id);
-
+      const { error } = await supabase.from('school_info').delete().eq('id', school.id);
       if (error) {
         alert("Gagal menghapus: " + error.message);
       } else {
         alert("Data sekolah telah dibersihkan.");
-        setSchool({ id: 1 }); // Reset state lokal
+        setSchool({ id: 1 });
         setIsEditing(false);
       }
       setLoading(false);
@@ -82,10 +68,11 @@ export default function DataSekolah() {
 
   return (
     <div className={`space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ${cur.text}`}>
+      
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter ">Identitas Sekolah</h1>
+          <h1 className={`text-4xl font-black tracking-tighter ${cur.text}`}>Identitas Sekolah</h1>
           <p className={`${cur.textMuted} text-sm font-medium`}>Pastikan NUPTK dan NPSN sudah benar untuk validasi rapor.</p>
         </div>
         <div className="flex gap-2">
@@ -99,7 +86,7 @@ export default function DataSekolah() {
           )}
           <button 
             onClick={() => setIsEditing(!isEditing)} 
-            className={`${isEditing ? 'bg-gray-500' : 'bg-blue-600'} text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 active:scale-95 transition-all`}
+            className={`${isEditing ? cur.input + ' ' + cur.text : 'bg-blue-600 text-white'} px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 active:scale-95 transition-all`}
           >
             {isEditing ? 'Batal' : 'Edit Identitas'}
           </button>
@@ -107,6 +94,7 @@ export default function DataSekolah() {
       </div>
 
       <form onSubmit={handleUpdate} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
         {/* --- SECTION 1: IDENTITAS --- */}
         <Section title="Identitas Utama" color="text-blue-500" cur={cur}>
           <InputField label="Nama Sekolah" value={school.nama} onChange={(v:any) => setSchool({...school, nama: v})} edit={isEditing} cur={cur} />
@@ -164,7 +152,7 @@ export default function DataSekolah() {
   );
 }
 
-// --- SUB-COMPONENTS BIAR KODE BERSIH ---
+// --- SUB-COMPONENTS ---
 
 function Section({ title, color, children, cur }: any) {
   return (
@@ -187,10 +175,10 @@ function InputField({ label, value, onChange, edit, cur }: any) {
           value={value || ''} 
           onChange={(e) => onChange(e.target.value)}
           placeholder={`Input ${label}...`}
-          className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-5 py-3 rounded-2xl focus:outline-none focus:border-blue-500 font-bold text-sm transition-all placeholder:opacity-20`}
+          className={`w-full ${cur.input} border ${cur.border} ${cur.text} px-5 py-3 rounded-2xl focus:outline-none focus:border-blue-500 font-bold text-sm transition-all placeholder:opacity-20`}
         />
       ) : (
-        <p className={`text-sm font-black tracking-tight ${!value ? 'opacity-20' : 'opacity-100'}`}>
+        <p className={`${cur.text} text-sm font-black tracking-tight ${!value ? 'opacity-20' : 'opacity-100'}`}>
           {value || `Belum diisi`}
         </p>
       )}

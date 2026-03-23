@@ -7,11 +7,55 @@ const ThemeContext = createContext<any>(null);
 
 export const useTheme = () => useContext(ThemeContext);
 
+// --- KOMPONEN DEKORASI TEMA (Mood Booster) ---
+function ThemeOverlay({ theme }: { theme: string }) {
+  if (!theme || theme === 'normal') return null;
+
+  return (
+    // Z-Index dinaikkan ke 9999 agar tidak tertutup konten utama
+    <div className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden opacity-60">
+      {/* TEMA HUT RI */}
+      {theme === 'hut_ri' && (
+        <>
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-600 via-white to-red-600 shadow-md"></div>
+          <div className="absolute top-10 right-10 text-5xl animate-bounce drop-shadow-lg">🇮🇩</div>
+          <div className="absolute bottom-10 left-10 text-4xl animate-pulse drop-shadow-lg">🇮🇩</div>
+        </>
+      )}
+
+      {/* TEMA RAMADHAN */}
+      {theme === 'ramadhan' && (
+        <>
+          <div className="absolute top-6 right-10 text-6xl opacity-40 drop-shadow-2xl">🌙</div>
+          <div className="absolute top-20 right-14 text-2xl opacity-30 animate-pulse">✨</div>
+          <div className="absolute top-10 left-10 text-3xl opacity-20">🕌</div>
+          <div className="absolute inset-0 bg-emerald-900/5"></div>
+        </>
+      )}
+
+      {/* TEMA PREMIUM GOLD */}
+      {theme === 'premium_gold' && (
+        <>
+           <div className="absolute inset-0 border-[16px] border-yellow-600/10"></div>
+           <div className="absolute top-0 left-0 w-full h-full bg-yellow-600/[0.02]"></div>
+        </>
+      )}
+
+      {/* TEMA OCEAN */}
+      {theme === 'ocean' && (
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-blue-500/20 blur-[120px] rounded-full"></div>
+      )}
+    </div>
+  );
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any>(null);
   const [appConfig, setAppConfig] = useState<any>({
     app_name: 'SIMARA',
     primary_color: '#2563eb',
+    app_font: 'Inter',
+    ui_theme: 'normal',
     is_maintenance: false
   });
   const [loading, setLoading] = useState(true);
@@ -32,19 +76,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
       setProfile(profileData);
 
-      // 2. AMBIL PENGATURAN APLIKASI (Nyawa Sistem)
+      // 2. AMBIL PENGATURAN APLIKASI
       const { data: configData } = await supabase.from('app_settings').select('*').single();
       
       if (configData) {
         setAppConfig(configData);
         
-        // TERAPKAN WARNA KE CSS (Agar warna tema berfungsi nyata)
+        // TERAPKAN WARNA KE CSS
         document.documentElement.style.setProperty('--primary-color', configData.primary_color);
 
-        // 3. LOGIKA MAINTENANCE (Satpam Gerbang)
+        // --- LOGIKA FONT DINAMIS ---
+        if (configData.app_font) {
+          document.body.style.fontFamily = `'${configData.app_font}', sans-serif`;
+        }
+
+        // 3. LOGIKA MAINTENANCE
         const isAdmin = profileData?.roles?.includes('Admin');
         if (configData.is_maintenance && !isAdmin) {
-          router.push('/maintenance'); // Tendang jika bukan admin saat maintenance
+          router.push('/maintenance');
           return;
         }
       }
@@ -55,6 +104,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     initializeDashboard();
   }, [router]);
 
+  // Memantau perubahan appConfig secara reaktif (Font, Judul, dan memaksa re-render Tema)
+  useEffect(() => {
+    if (appConfig.app_font) {
+      document.documentElement.style.setProperty('font-family', `'${appConfig.app_font}', sans-serif`, 'important');
+      document.body.style.fontFamily = `'${appConfig.app_font}', sans-serif`;
+    }
+    if (appConfig.app_name) {
+      document.title = appConfig.app_name;
+    }
+  }, [appConfig]);
+
   // Design Tokens dengan Warna Dinamis
   const cur = {
     light: { 
@@ -64,8 +124,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       border: "border-gray-200", 
       textMuted: "text-gray-500", 
       hover: "hover:bg-gray-50",
-      primary: "text-[var(--primary-color)]", // Warna dari database
-      bgPrimary: "bg-[var(--primary-color)]" // Warna dari database
+      primary: "text-[var(--primary-color)]",
+      bgPrimary: "bg-[var(--primary-color)]"
     },
     dark: { 
       bg: "bg-gray-950", 
@@ -80,7 +140,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }[mode === 'read' ? 'light' : mode];
 
   return (
-    <ThemeContext.Provider value={{ profile, appConfig, loading, cur, mode, setMode }}>
+    <ThemeContext.Provider value={{ profile, appConfig, setAppConfig, loading, cur, mode, setMode }}>
+      {/* OVERLAY TEMA DINAMIS - Diletakkan di sini agar merespon state appConfig.ui_theme */}
+      <ThemeOverlay theme={appConfig.ui_theme} />
+      
       {children}
     </ThemeContext.Provider>
   );
