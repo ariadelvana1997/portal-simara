@@ -16,7 +16,7 @@ const IconRefresh = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="
 type Role = 'Admin' | 'Walikelas' | 'Guru' | 'Siswa';
 
 export default function MasterPengguna() {
-  const { cur } = useTheme();
+  const { cur, t = (key: string) => key } = useTheme();
   const [activeTab, setActiveTab] = useState<Role>('Admin');
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +29,7 @@ export default function MasterPengguna() {
 
   const [isModalOpen, setModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); 
   const [formData, setFormData] = useState({ id: '', email: '', full_name: '', password: '', roles: [] as string[] });
 
   const availableRoles = ['Admin', 'Walikelas', 'Guru', 'Siswa'];
@@ -47,8 +48,8 @@ export default function MasterPengguna() {
     let result = users.filter(user => {
       const userRoles = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
       const matchesTab = userRoles.some((r: string) => r?.toLowerCase() === activeTab.toLowerCase());
-      const matchesSearch = user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (user.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            (user.email || '').toLowerCase().includes(searchTerm.toLowerCase());
       return matchesTab && matchesSearch;
     });
 
@@ -118,38 +119,59 @@ export default function MasterPengguna() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.roles.length === 0) return alert("Pilih minimal satu role!");
-    
-    const payload: any = { 
-        full_name: formData.full_name, 
-        email: formData.email, 
-        roles: formData.roles 
-    };
+    setIsSubmitting(true);
 
-    // Jika password diisi, masukkan ke payload
-    if (formData.password) {
-        payload.password = formData.password;
-    }
+    try {
+      if (isEditing) {
+        // --- LOGIKA UPDATE ---
+        const { error } = await supabase.from('profiles')
+          .update({ full_name: formData.full_name, roles: formData.roles })
+          .eq('id', formData.id);
+        
+        if (error) throw error;
+        alert("✅ " + (t('save_success') || "Profil Berhasil Diperbarui!"));
+      } else {
+        // --- LOGIKA PENDAFTARAN USER BARU (Fix Invalid Credentials) ---
+        // 1. Daftarkan Akun ke Supabase Authentication (Login System)
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: { full_name: formData.full_name }
+          }
+        });
 
-    let result;
-    if (isEditing) {
-      result = await supabase.from('profiles').update(payload).eq('id', formData.id);
-    } else {
-      payload.id = crypto.randomUUID(); 
-      result = await supabase.from('profiles').insert([payload]);
-    }
+        if (authError) throw authError;
 
-    if (result.error) {
-      if (result.error.code === '23505') alert("🚨 Email sudah digunakan! Klik 🔄 untuk ID baru.");
-      else alert("Gagal: " + result.error.message);
-    } else {
-      alert("✅ Data Berhasil Disimpan!");
+        // 2. Gunakan UPSERT untuk mengisi profil (Sinkronkan ID dari Auth)
+        if (authData.user) {
+          const { error: profileError } = await supabase.from('profiles').upsert({
+            id: authData.user.id, 
+            email: formData.email,
+            full_name: formData.full_name,
+            roles: formData.roles
+          }, { onConflict: 'id' });
+          
+          if (profileError) throw profileError;
+        }
+        alert("✅ Akun Berhasil Didaftarkan! User sekarang bisa login.");
+      }
+
       setModalOpen(false);
       fetchUsers();
+    } catch (err: any) {
+      if (err.message.includes("User already registered")) {
+        alert("🚨 Email sudah digunakan! Silakan gunakan email lain.");
+      } else {
+        alert("🚨 Gagal: " + err.message);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Hapus pengguna ini?")) {
+    if (confirm("Hapus pengguna ini secara permanen?")) {
       const { error } = await supabase.from('profiles').delete().eq('id', id);
       if (!error) fetchUsers();
     }
@@ -162,7 +184,7 @@ export default function MasterPengguna() {
         id: user.id, 
         email: user.email, 
         full_name: user.full_name, 
-        password: '', // Kosongkan saat buka edit agar tidak menampilkan hash/pass lama
+        password: '', 
         roles: Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []) 
       });
     } else {
@@ -194,7 +216,7 @@ export default function MasterPengguna() {
 
       {/* TOOLBAR */}
       <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
-        <div className={`flex p-1.5 ${cur.card} border ${cur.border} rounded-2xl w-full lg:w-fit gap-1 shadow-sm overflow-x-auto`}>
+        <div className={`flex p-1.5 ${cur.card} border ${cur.border} rounded-2xl w-full lg:w-fit gap-1 shadow-sm overflow-x-auto custom-scrollbar`}>
             {availableRoles.map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab as Role)} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === tab ? 'bg-blue-600 text-white shadow-md' : `${cur.textMuted} hover:bg-gray-500/10`}`}>
                 {tab}
@@ -209,7 +231,7 @@ export default function MasterPengguna() {
                 placeholder="Cari Nama / Email..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full ${cur.card} border ${cur.border} pl-11 pr-4 py-3.5 rounded-2xl font-bold text-xs focus:outline-none focus:border-blue-600 transition-all shadow-sm group-hover:shadow-md`}
+                className={`w-full ${cur.card} border ${cur.border} pl-11 pr-4 py-3.5 rounded-2xl font-bold text-xs focus:outline-none focus:border-blue-600 transition-all shadow-sm group-hover:shadow-md ${cur.text}`}
             />
         </div>
       </div>
@@ -219,7 +241,7 @@ export default function MasterPengguna() {
         <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
             <thead>
-                <tr className={`border-b ${cur.border} ${cur.bg} bg-opacity-50`}>
+                <tr className={`border-b ${cur.border} bg-gray-500/5`}>
                 <th className="px-6 py-5 w-10">
                     <button onClick={handleSelectAll} className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${selectedIds.length === paginatedUsers.length && paginatedUsers.length > 0 ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                         {selectedIds.length === paginatedUsers.length && paginatedUsers.length > 0 && <IconCheck />}
@@ -250,7 +272,7 @@ export default function MasterPengguna() {
                     </td>
                     <td className="px-8 py-5">
                     <div className="flex gap-1.5 flex-wrap">
-                        {(Array.isArray(user.roles) ? user.roles : [user.role]).map((r: string) => (
+                        {(Array.isArray(user.roles) ? user.roles : [user.role || 'User']).map((r: string) => (
                         <span key={r} className="px-2.5 py-1 rounded-lg bg-blue-600/10 text-blue-600 text-[9px] font-black uppercase tracking-tighter border border-blue-600/20">{r}</span>
                         ))}
                     </div>
@@ -289,7 +311,7 @@ export default function MasterPengguna() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase ml-1 opacity-50 tracking-widest">Nama Lengkap</label>
-                  <input required value={formData.full_name} onChange={(e) => handleNameChange(e.target.value)} className={`w-full ${cur.bg} border ${cur.border} px-5 py-4 rounded-2xl focus:outline-none focus:border-blue-600 transition-all font-bold text-sm`} placeholder="Masukkan Nama..." />
+                  <input required value={formData.full_name} onChange={(e) => handleNameChange(e.target.value)} className={`w-full ${cur.bg} border ${cur.border} px-5 py-4 rounded-2xl focus:outline-none focus:border-blue-600 transition-all font-bold text-sm ${cur.text}`} placeholder="Masukkan Nama..." />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase ml-1 opacity-50 tracking-widest">Email Address</label>
@@ -299,7 +321,7 @@ export default function MasterPengguna() {
                       required 
                       value={formData.email} 
                       onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                      className={`w-full ${cur.bg} border ${cur.border} pl-5 pr-12 py-4 rounded-2xl focus:outline-none focus:border-blue-600 transition-all font-bold text-sm ${!isEditing && 'bg-blue-600/5'}`} 
+                      className={`w-full ${cur.bg} border ${cur.border} pl-5 pr-12 py-4 rounded-2xl focus:outline-none focus:border-blue-600 transition-all font-bold text-sm ${!isEditing && 'bg-blue-600/5'} ${cur.text}`} 
                       placeholder="Otomatis..." 
                       readOnly={!isEditing}
                     />
@@ -325,7 +347,6 @@ export default function MasterPengguna() {
                 </div>
               </div>
               
-              {/* KOLOM PASSWORD (MUNCUL SAAT TAMBAH & EDIT) */}
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase ml-1 opacity-50 tracking-widest">
                     {isEditing ? 'Ganti Password (Kosongkan jika tidak diubah)' : 'Password Akun'}
@@ -335,14 +356,16 @@ export default function MasterPengguna() {
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
                   required={!isEditing} 
-                  className={`w-full ${cur.bg} border ${cur.border} px-5 py-4 rounded-2xl focus:outline-none focus:border-blue-600 transition-all font-bold text-sm`} 
+                  className={`w-full ${cur.bg} border ${cur.border} px-5 py-4 rounded-2xl focus:outline-none focus:border-blue-600 transition-all font-bold text-sm ${cur.text}`} 
                   placeholder={isEditing ? "Isi untuk ganti password..." : "Minimal 6 karakter"} 
                 />
               </div>
 
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setModalOpen(false)} className={`flex-1 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest ${cur.hover} transition-all`}>Batalkan</button>
-                <button type="submit" className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-600/30 active:scale-95 transition-all">Simpan Akun</button>
+                <button type="submit" disabled={isSubmitting} className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-600/30 active:scale-95 transition-all">
+                  {isSubmitting ? 'Proses...' : 'Simpan Akun'}
+                </button>
               </div>
             </form>
           </div>

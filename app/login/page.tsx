@@ -30,15 +30,23 @@ export default function LoginPage() {
       return;
     }
 
-    // Ambil Role dari tabel profiles
+    // Ambil Role dari tabel profiles (Ditambahkan select 'roles' sebagai cadangan)
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, roles')
       .eq('id', data.user?.id)
       .single();
 
     if (profile) {
-router.push(`/dashboard/${profile.role.toLowerCase()}`);
+      // FIX ERROR: Cek roles (array) dulu, kalau kosong cek role (string), kalau null jadi string kosong
+      const rawRole = (profile.roles && profile.roles[0]) || profile.role || '';
+      
+      if (rawRole) {
+        router.push(`/dashboard/${rawRole.toLowerCase()}`);
+      } else {
+        alert("Role tidak ditemukan. Hubungi Admin.");
+        setLoading(false);
+      }
     } else {
       alert("Profil tidak ditemukan. Hubungi Admin.");
       setLoading(false);
