@@ -57,7 +57,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return translations[lang]?.[key] || key;
   };
 
-  // --- LOGIKA TEMA + MODE DENGAN PROTEKSI MULTI-LEVEL ---
+  // --- LOGIKA TEMA + MODE ---
   const activeTheme = themes?.[appConfig?.app_theme] || themes?.default || { primary: "#3C50E0" };
   const cur = activeTheme?.modes?.[mode] || themes?.default?.modes?.[mode] || SAFE_FALLBACK;
 
@@ -114,22 +114,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         )}
 
-        {isSidebarOpen && <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setSidebarOpen(false)}></div>}
+        {/* OVERLAY MOBILE */}
+        {isSidebarOpen && <div className="fixed inset-0 bg-black/40 z-[60] md:hidden backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setSidebarOpen(false)}></div>}
 
         {/* SIDEBAR */}
-        <aside className={`fixed inset-y-0 left-0 z-50 border-r transition-[width,transform] duration-500 md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${isCollapsed ? 'md:w-20' : 'md:w-72'} ${cur.sidebar} ${cur.border} flex flex-col`}>
+        <aside className={`fixed inset-y-0 left-0 z-[70] border-r transition-[width,transform] duration-500 md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${isCollapsed ? 'md:w-20' : 'md:w-72'} ${cur.sidebar} ${cur.border} flex flex-col shadow-2xl md:shadow-none`}>
           <div className={`h-16 flex items-center border-b shrink-0 ${cur.border} ${isCollapsed ? 'justify-center' : 'px-6'}`}>
             <span className="font-black text-xl tracking-tighter " style={{ color: activeTheme.primary }}>{isCollapsed ? 'S' : 'SIMARA v1.0'}</span>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
-            <NavItem href="/dashboard/admin" icon={<IconDashboard />} label={t('dashboard')} active={pathname === '/dashboard/admin'} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} />
-            <NavItem href="/dashboard/admin/pengguna" icon={<IconUsers />} label={t('master_user')} active={pathname === '/dashboard/admin/pengguna'} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} />
+            <NavItem href="/dashboard/admin" icon={<IconDashboard />} label={t('dashboard')} active={pathname === '/dashboard/admin'} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} setSidebarOpen={setSidebarOpen} />
+            <NavItem href="/dashboard/admin/pengguna" icon={<IconUsers />} label={t('master_user')} active={pathname === '/dashboard/admin/pengguna'} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} setSidebarOpen={setSidebarOpen} />
             
             <hr className={`mx-2 my-4 border-t ${cur.border} opacity-50`} />
 
-            {/* 1. MASTER REFERENSI (12 SUBMENU) */}
-            <NavGroup icon={<IconRef />} label={t('master_ref')} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} isOpen={openGroup === 'ref'} onClick={() => setOpenGroup(openGroup === 'ref' ? null : 'ref')}
+            {/* 1. MASTER REFERENSI */}
+            <NavGroup icon={<IconRef />} label={t('master_ref')} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} isOpen={openGroup === 'ref'} onClick={() => setOpenGroup(openGroup === 'ref' ? null : 'ref')} setSidebarOpen={setSidebarOpen}
               submenus={[
                 { label: t('school_data'), href: "/dashboard/admin/referensi/sekolah", icon: <SubIcon d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/> },
                 { label: t('academic_year'), href: "/dashboard/admin/referensi/tahun", icon: <SubIcon d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z M16 2v4 M8 2v4 M3 10h18"/> },
@@ -147,7 +148,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             />
 
             {/* 2. MASTER KO-KURIKULER */}
-            <NavGroup icon={<IconCoKuler />} label={t('master_kokul')} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} isOpen={openGroup === 'kokul'} onClick={() => setOpenGroup(openGroup === 'kokul' ? null : 'kokul')}
+            <NavGroup icon={<IconCoKuler />} label={t('master_kokul')} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} isOpen={openGroup === 'kokul'} onClick={() => setOpenGroup(openGroup === 'kokul' ? null : 'kokul')} setSidebarOpen={setSidebarOpen}
               submenus={[
                 { label: t('theme_list'), href: "/dashboard/admin/kokurikuler/tema", icon: <SubIcon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/> },
                 { label: t('activity'), href: "/dashboard/admin/kokurikuler/kegiatan", icon: <SubIcon d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z M16 2v4 M8 2v4 M3 10h18"/> },
@@ -156,11 +157,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             />
 
             {/* MASTER PKL & P5 */}
-            <NavItem href="/dashboard/admin/p5" icon={<IconStar />} label={t('p5')} active={pathname.includes('/p5')} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} />
-            <NavItem href="/dashboard/admin/pkl" icon={<IconBriefcase />} label={t('pkl')} active={pathname.includes('/pkl')} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} />
+            <NavItem href="/dashboard/admin/p5" icon={<IconStar />} label={t('p5')} active={pathname.includes('/p5')} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} setSidebarOpen={setSidebarOpen} />
+            <NavItem href="/dashboard/admin/pkl" icon={<IconBriefcase />} label={t('pkl')} active={pathname.includes('/pkl')} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} setSidebarOpen={setSidebarOpen} />
 
             {/* 3. MASTER PENILAIAN */}
-            <NavGroup icon={<IconEdit />} label={t('master_nilai')} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} isOpen={openGroup === 'nilai'} onClick={() => setOpenGroup(openGroup === 'nilai' ? null : 'nilai')}
+            <NavGroup icon={<IconEdit />} label={t('master_nilai')} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} isOpen={openGroup === 'nilai'} onClick={() => setOpenGroup(openGroup === 'nilai' ? null : 'nilai')} setSidebarOpen={setSidebarOpen}
               submenus={[
                 { label: t('penilaian'), href: "/dashboard/admin/nilai", icon: <SubIcon d="M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/> },
                 { label: t('ekskul_nilai'), href: "/dashboard/admin/ekskul-nilai", icon: <SubIcon d="M13 10V3L4 14h7v7l9-11h-7z"/> },
@@ -170,7 +171,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             />
 
             {/* 4. MASTER CETAK RAPOR */}
-            <NavGroup icon={<IconPrinter />} label={t('master_cetak')} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} isOpen={openGroup === 'cetak'} onClick={() => setOpenGroup(openGroup === 'cetak' ? null : 'cetak')}
+            <NavGroup icon={<IconPrinter />} label={t('master_cetak')} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} isOpen={openGroup === 'cetak'} onClick={() => setOpenGroup(openGroup === 'cetak' ? null : 'cetak')} setSidebarOpen={setSidebarOpen}
               submenus={[
                 { label: t('rapor_biasa'), href: "/dashboard/admin/rapor", icon: <SubIcon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8"/> },
                 { label: t('rapor_p5'), href: "/dashboard/admin/cetak/p5", icon: <SubIcon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14"/> },
@@ -179,7 +180,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             />
 
             <hr className={`mx-2 my-4 border-t ${cur.border} opacity-50`} />
-            <NavItem href="/dashboard/admin/pengaturan" icon={<IconSettings />} label={t('setting')} active={pathname === '/dashboard/admin/pengaturan'} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} />
+            <NavItem href="/dashboard/admin/pengaturan" icon={<IconSettings />} label={t('setting')} active={pathname === '/dashboard/admin/pengaturan'} isCollapsed={isCollapsed} cur={cur} primary={activeTheme.primary} setSidebarOpen={setSidebarOpen} />
           </div>
 
           <div className={`p-3 border-t shrink-0 ${cur.border}`}>
@@ -191,12 +192,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* MAIN AREA */}
         <div className="flex-1 flex flex-col min-w-0 transition-all duration-500">
-          <header className={`h-16 flex items-center justify-between px-4 md:px-8 border-b ${cur.border} ${cur.header}`}>
+          <header className={`h-16 flex items-center justify-between px-4 md:px-8 border-b ${cur.border} ${cur.header} sticky top-0 z-[55] backdrop-blur-md`}>
             <div className="flex items-center gap-4">
-              <button onClick={() => setIsCollapsed(!isCollapsed)} className={`p-2 ${cur.hover} ${cur.radius} active:scale-75 transition-all group`}>
-                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h8m-8 6h16" /></svg>
+              {/* TOMBOL HAMBURGER (SINKRON DENGAN MOBILE & DESKTOP) */}
+              <button 
+                onClick={() => {
+                  // Jika Desktop (md up): Toggle Collapse
+                  setIsCollapsed(!isCollapsed);
+                  // Jika Mobile: Buka Sidebar
+                  setSidebarOpen(true);
+                }} 
+                className={`p-2 ${cur.hover} ${cur.radius} active:scale-75 transition-all group`}
+              >
+                  <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 12h10m-10 6h16" /></svg>
               </button>
-              <h2 className="font-bold tracking-tight hidden sm:block opacity-40">Admin Panel</h2>
+              <h2 className="font-black text-[10px] uppercase tracking-[0.3em] hidden sm:block opacity-40">Admin Panel</h2>
             </div>
 
             <div className="flex items-center gap-4">
@@ -231,17 +241,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 }
 
-// --- SUB-COMPONENTS (FIXED RAPI) ---
-function NavItem({ href, icon, label, active, isCollapsed, cur, primary }: any) {
+// --- SUB-COMPONENTS ---
+function NavItem({ href, icon, label, active, isCollapsed, cur, primary, setSidebarOpen }: any) {
   return (
-    <Link href={href} className={`flex items-center transition-all duration-300 group ${active ? 'text-white shadow-lg shadow-blue-500/20' : `hover:translate-x-1 active:scale-95`} ${isCollapsed ? 'w-12 h-12 justify-center mx-auto' : 'gap-3 p-3'} ${cur.radius}`} style={{ backgroundColor: active ? primary : 'transparent', color: active ? 'white' : 'inherit' }}>
+    <Link 
+      href={href} 
+      onClick={() => setSidebarOpen(false)} // Tutup sidebar di mobile saat menu diklik
+      className={`flex items-center transition-all duration-300 group ${active ? 'text-white shadow-lg shadow-blue-500/20' : `hover:translate-x-1 active:scale-95`} ${isCollapsed ? 'w-12 h-12 justify-center mx-auto' : 'gap-3 p-3'} ${cur.radius}`} 
+      style={{ backgroundColor: active ? primary : 'transparent', color: active ? 'white' : 'inherit' }}
+    >
       <span className={`transition-transform duration-300 ${active ? 'scale-110' : 'group-hover:scale-110 opacity-70'}`}>{icon}</span> 
       {!isCollapsed && <span className={`font-bold text-sm tracking-tight truncate ${!active ? 'opacity-70' : ''}`}>{label}</span>}
     </Link>
   );
 }
 
-function NavGroup({ icon, label, isCollapsed, cur, primary, isOpen, onClick, submenus }: any) {
+function NavGroup({ icon, label, isCollapsed, cur, primary, isOpen, onClick, submenus, setSidebarOpen }: any) {
   const pathname = usePathname();
   return (
     <div className="space-y-1">
@@ -255,7 +270,13 @@ function NavGroup({ icon, label, isCollapsed, cur, primary, isOpen, onClick, sub
       {!isCollapsed && isOpen && (
         <div className={`ml-4 pl-4 border-l-2 space-y-1 py-1 animate-in slide-in-from-top-2 fade-in duration-300 origin-top`} style={{ borderColor: `${primary}20` }}>
           {submenus.map((sub: any, i: number) => (
-            <Link key={i} href={sub.href} className={`flex items-center gap-3 p-2 rounded-lg text-[11px] font-bold transition-all duration-200 ${pathname === sub.href ? `bg-blue-600/5` : `hover:bg-gray-500/5 opacity-70 hover:opacity-100`}`} style={{ color: pathname === sub.href ? primary : 'inherit' }}>
+            <Link 
+              key={i} 
+              href={sub.href} 
+              onClick={() => setSidebarOpen(false)} // Tutup sidebar di mobile saat submenu diklik
+              className={`flex items-center gap-3 p-2 rounded-lg text-[11px] font-bold transition-all duration-200 ${pathname === sub.href ? `bg-blue-600/5` : `hover:bg-gray-500/5 opacity-70 hover:opacity-100`}`} 
+              style={{ color: pathname === sub.href ? primary : 'inherit' }}
+            >
               <span className={`transition-transform duration-200 ${pathname === sub.href ? 'scale-125' : ''}`}>{sub.icon}</span>
               <span className="truncate">{sub.label}</span>
             </Link>
