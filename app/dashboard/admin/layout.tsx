@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { translations } from '@/lib/translations'; 
 import { themes } from '@/lib/themes'; 
 
-// --- BACKUP WARNA ---
+// --- BACKUP WARNA (Emergency Fallback jika themes.ts belum terbaca) ---
 const SAFE_FALLBACK = {
   bg: "bg-gray-50", sidebar: "bg-white", header: "bg-white", text: "text-gray-900", 
   textMuted: "text-gray-500", border: "border-gray-200", hover: "hover:bg-gray-100", 
@@ -21,7 +21,7 @@ export const useTheme = () => {
   return context;
 };
 
-// --- ICONS ---
+// --- ICONS (LENGKAP & UKURAN KONSISTEN) ---
 const IconDashboard = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>;
 const IconUsers = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>;
 const IconRef = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>;
@@ -61,10 +61,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const activeTheme = themes?.[appConfig?.app_theme] || themes?.default || { primary: "#3C50E0" };
   const cur = activeTheme?.modes?.[mode] || themes?.default?.modes?.[mode] || SAFE_FALLBACK;
 
+  // --- LOGIKA BERHENTI AUTOPILOT ---
+  const handleStopAutopilot = () => {
+    sessionStorage.removeItem('simara_autopilot_user');
+    sessionStorage.removeItem('simara_admin_backup');
+    window.location.href = '/dashboard/admin/pengguna';
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
+        // 1. PRIORITAS: CEK MODE AUTOPILOT (Penentu kemenangan agar tidak mental ke login)
+        const ghostUser = sessionStorage.getItem('simara_autopilot_user');
+        if (ghostUser) {
+          const parsedGhost = JSON.parse(ghostUser);
+          setProfile({ ...parsedGhost, is_autopilot: true });
+          
+          // Tetap ambil config aplikasi untuk tema
+          const { data: configData } = await supabase.from('app_settings').select('*').single();
+          if (configData) {
+            setAppConfig(configData);
+            if (configData.is_xprivacy_enabled !== undefined) setIsXPrivacyEnabled(configData.is_xprivacy_enabled);
+          }
+          setLoading(false);
+          return; // STOP: Jangan cek Supabase Auth asli
+        }
+
+        // 2. LOGIKA NORMAL (Jika tidak sedang menyamar)
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
         const [profRes, confRes] = await Promise.all([
@@ -96,6 +120,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <ThemeContext.Provider value={{ cur, mode, setMode, setIsLocked, profile, appConfig, setAppConfig, t }}>
       <div className={`min-h-screen flex transition-colors duration-700 ease-in-out ${cur.bg} ${cur.text} font-sans`}>
         
+        {/* --- FLOATING STOP AUTOPILOT BUTTON --- */}
+        {profile?.is_autopilot && (
+            <div className="fixed bottom-8 right-8 z-[10000] animate-bounce-slow">
+                <button 
+                onClick={handleStopAutopilot}
+                className="group flex items-center gap-3 bg-red-600 text-white pl-4 pr-6 py-3.5 rounded-full font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-red-600/40 hover:bg-red-700 transition-all active:scale-95"
+                >
+                <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                </span>
+                <span>Stop Autopilot</span>
+                </button>
+            </div>
+        )}
+
         {/* XPRIVASI OVERLAY */}
         {isLocked && (
           <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center p-6 backdrop-blur-md animate-in fade-in duration-700">
@@ -117,7 +157,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* OVERLAY MOBILE */}
         {isSidebarOpen && <div className="fixed inset-0 bg-black/40 z-[60] md:hidden backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setSidebarOpen(false)}></div>}
 
-        {/* SIDEBAR - Fix Width Logic for Mobile */}
+        {/* SIDEBAR */}
         <aside className={`fixed inset-y-0 left-0 z-[70] border-r transition-[width,transform] duration-500 md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0 w-72' : '-translate-x-full'} ${isCollapsed ? 'md:w-20' : 'md:w-72'} ${cur.sidebar} ${cur.border} flex flex-col shadow-2xl md:shadow-none`}>
           <div className={`h-16 flex items-center border-b shrink-0 ${cur.border} ${isCollapsed && !isSidebarOpen ? 'justify-center' : 'px-6'}`}>
             <span className="font-black text-xl tracking-tighter " style={{ color: activeTheme.primary }}>{isCollapsed && !isSidebarOpen ? 'S' : 'SIMARA v1.0'}</span>
@@ -140,7 +180,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 { label: t('subject_data'), href: "/dashboard/admin/referensi/mapel", icon: <SubIcon d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/> },
                 { label: t('ekskul_data'), href: "/dashboard/admin/referensi/ekskul", icon: <SubIcon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/> },
                 { label: t('mapel_group'), href: "/dashboard/admin/referensi/kelompok", icon: <SubIcon d="M12 2L2 7l10 5 10-5-10-5z M2 17l10 5 10-5 M2 12l10 5 10-5"/> },
-                { label: t('mapping_rapor'), href: "/dashboard/admin/referensi/mapping-rapor", icon: <SubIcon d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3m-1 5h8"/> },
+                { label: t('mapping_rapor'), href: "/dashboard/admin/referensi/mapping-rapor", icon: <SubIcon d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-1-5 5 5 0 0 1 5-5h3m-1 5h8"/> },
                 { label: t('logo_ttd'), href: "/dashboard/admin/referensi/logo", icon: <SubIcon d="M12 20h9 M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/> },
                 { label: t('rapor_date'), href: "/dashboard/admin/referensi/tanggal", icon: <SubIcon d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/> },
                 { label: t('student_photo'), href: "/dashboard/admin/referensi/foto", icon: <SubIcon d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/> }
@@ -173,9 +213,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* 4. MASTER CETAK RAPOR */}
             <NavGroup icon={<IconPrinter />} label={t('master_cetak')} isCollapsed={isCollapsed} isSidebarOpen={isSidebarOpen} cur={cur} primary={activeTheme.primary} isOpen={openGroup === 'cetak'} onClick={() => setOpenGroup(openGroup === 'cetak' ? null : 'cetak')} setSidebarOpen={setSidebarOpen}
               submenus={[
-                { label: t('rapor_biasa'), href: "/dashboard/admin/rapor", icon: <SubIcon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8"/> },
-                { label: t('rapor_p5'), href: "/dashboard/admin/cetak/p5", icon: <SubIcon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14"/> },
-                { label: t('rapor_kokul'), href: "/dashboard/admin/cetak/kokul", icon: <SubIcon d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5"/> }
+                { label: t('rapor_biasa'), href: "/dashboard/admin/rapor", icon: <SubIcon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8"/> }
               ]}
             />
 

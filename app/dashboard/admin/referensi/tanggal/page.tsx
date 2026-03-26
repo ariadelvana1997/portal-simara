@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { useTheme } from '@/app/providers';
+import { useTheme } from '../../../layout';
 import { supabase } from '@/lib/supabase';
 
 export default function DataTanggalRapor() {
@@ -9,7 +9,7 @@ export default function DataTanggalRapor() {
   const [dates, setDates] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // State Form sesuai gambar
+  // State Form disederhanakan hanya untuk data Waktu & Tempat
   const [formData, setFormData] = useState<any>({
     id: null,
     semester: 'Ganjil',
@@ -33,46 +33,83 @@ export default function DataTanggalRapor() {
     setLoading(false);
   };
 
+  // LOGIKA SIMPAN: Diperbarui agar mengambil Tahun Ajaran aktif supaya tidak hilang di Rapor
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    // 1. Ambil Tahun Ajaran yang sedang aktif
+    const { data: activeYear } = await supabase
+      .from('academic_years')
+      .select('year')
+      .eq('is_active', true)
+      .maybeSingle();
+
     const { id, ...payload } = formData;
-    const finalPayload = id ? formData : payload;
+    
+    // 2. Masukkan academic_year ke dalam payload
+    const dataWithYear = {
+      ...payload,
+      academic_year: activeYear?.year || '-'
+    };
 
-    const { error } = await supabase.from('report_dates').upsert(finalPayload);
+    // 3. Gunakan logika Update jika ada ID, Insert jika tidak ada
+    let result;
+    if (id) {
+      result = await supabase.from('report_dates').update(dataWithYear).eq('id', id);
+    } else {
+      result = await supabase.from('report_dates').insert([dataWithYear]);
+    }
 
-    if (!error) {
-      alert("Tanggal Rapor Berhasil Disimpan! 📅");
+    if (!result.error) {
+      alert("Waktu Rapor Berhasil Disimpan! 📅");
       setIsModalOpen(false);
+      resetForm();
       fetchData();
     } else {
-      alert("Gagal: " + error.message);
+      alert("Gagal: " + result.error.message);
     }
     setLoading(false);
   };
 
   const handleDelete = async (id: number) => {
     if (confirm("Hapus pengaturan tanggal ini?")) {
-      await supabase.from('report_dates').delete().eq('id', id);
-      fetchData();
+      setLoading(true);
+      const { error } = await supabase.from('report_dates').delete().eq('id', id);
+      if (!error) fetchData();
+      setLoading(false);
     }
   };
 
-  if (loading && !isModalOpen) return <div className="p-10 opacity-20 font-black  text-center">MENYIAPKAN KALENDER RAPOR...</div>;
+  const resetForm = () => setFormData({ 
+    id: null, 
+    semester: 'Ganjil', 
+    semester_number: 1, 
+    location: '', 
+    report_date: '' 
+  });
+
+  if (loading && !isModalOpen) return (
+    <div className={`min-h-[400px] flex items-center justify-center font-black opacity-20 ${cur.text}`}>
+      MENYIAPKAN KALENDER RAPOR...
+    </div>
+  );
 
   return (
     <div className={`space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ${cur.text}`}>
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter ">Tanggal Rapor</h1>
-          <p className={`${cur.textMuted} text-sm font-medium`}>Atur waktu dan tempat penerbitan dokumen rapor.</p>
+          <h1 className="text-4xl font-black tracking-tighter">Tanggal Rapor</h1>
+          <p className={`${cur.textMuted} text-sm font-medium`}>Kelola periode semester dan waktu penerbitan dokumen.</p>
         </div>
         <button 
-          onClick={() => { setFormData({ id: null, semester: 'Ganjil', semester_number: 1, location: '', report_date: '' }); setIsModalOpen(true); }}
-          className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+          onClick={() => { 
+            resetForm();
+            setIsModalOpen(true); 
+          }}
+          className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
         >
-          Tambah Tanggal
+          Tambah Konfigurasi
         </button>
       </div>
 
@@ -83,34 +120,32 @@ export default function DataTanggalRapor() {
             <thead>
               <tr className={`border-b ${cur.border} bg-gray-500/5`}>
                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Semester</th>
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-center">Ke</th>
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Tempat Cetak</th>
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Tanggal Rapor</th>
+                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Lokasi & Tanggal Terbit</th>
                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {dates.map((d) => (
                 <tr key={d.id} className={`border-b ${cur.border} group hover:bg-gray-500/5 transition-all`}>
-                  <td className="px-8 py-5 font-black ">{d.semester}</td>
-                  <td className="px-8 py-5 text-center">
-                    <span className="bg-blue-600/10 text-blue-600 px-3 py-1 rounded-lg font-black text-xs">
-                        {d.semester_number}
-                    </span>
+                  <td className="px-8 py-5">
+                    <div className="font-black">{d.semester}</div>
+                    <div className="text-[10px] opacity-40 font-bold uppercase tracking-tighter">Semester Ke-{d.semester_number}</div>
                   </td>
-                  <td className="px-8 py-5 font-bold uppercase text-xs opacity-60">{d.location}</td>
-                  <td className="px-8 py-5 font-black tracking-tight">{d.report_date}</td>
-                  <td className="px-8 py-5 text-right space-x-3">
-                    <button onClick={() => { setFormData(d); setIsModalOpen(true); }} className="text-[10px] font-black uppercase text-blue-600">Edit</button>
-                    <button onClick={() => handleDelete(d.id)} className="text-[10px] font-black uppercase text-red-600">Hapus</button>
+                  <td className="px-8 py-5">
+                    <div className="font-bold uppercase text-xs opacity-60">{d.location}</div>
+                    <div className="font-black tracking-tight text-blue-600">{d.report_date}</div>
+                  </td>
+                  <td className="px-8 py-5 text-right space-x-4">
+                    <button onClick={() => { setFormData(d); setIsModalOpen(true); }} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Edit</button>
+                    <button onClick={() => handleDelete(d.id)} className="text-[10px] font-black uppercase text-red-600 hover:underline">Hapus</button>
                   </td>
                 </tr>
               ))}
-              {dates.length === 0 && (
-                <tr><td colSpan={5} className="p-20 text-center opacity-20 font-black ">Belum ada data tanggal rapor.</td></tr>
-              )}
             </tbody>
           </table>
+          {dates.length === 0 && (
+             <div className="p-20 text-center opacity-20 font-black uppercase tracking-widest">Belum ada pengaturan tanggal</div>
+          )}
         </div>
       </div>
 
@@ -118,48 +153,39 @@ export default function DataTanggalRapor() {
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className={`${cur.card} w-full max-w-md rounded-[3rem] border ${cur.border} p-10 shadow-2xl animate-in zoom-in-95`}>
-            <h2 className="text-3xl font-black tracking-tighter  mb-8">{formData.id ? 'Edit' : 'Tambah'} Tanggal</h2>
+            <h2 className="text-3xl font-black tracking-tighter mb-6">{formData.id ? 'Update' : 'Set'} Waktu Rapor</h2>
             <form onSubmit={handleSubmit} className="space-y-5">
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-5">
                 <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest opacity-30  ml-2">Semester</label>
-                    <select className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl font-bold appearance-none`} value={formData.semester} onChange={(e) => setFormData({...formData, semester: e.target.value})}>
+                    <label className="text-[9px] font-black uppercase tracking-widest opacity-30 ml-2">Semester</label>
+                    <select className={`w-full bg-gray-500/10 border ${cur.border} px-5 py-3.5 rounded-2xl font-bold appearance-none`} value={formData.semester} onChange={(e) => setFormData({...formData, semester: e.target.value})}>
                         <option value="Ganjil">Ganjil</option>
                         <option value="Genap">Genap</option>
                     </select>
                 </div>
+                
                 <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest opacity-30  ml-2">Semester Ke-</label>
-                    <input type="number" required className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl font-bold`} value={formData.semester_number} onChange={(e) => setFormData({...formData, semester_number: parseInt(e.target.value)})} />
+                    <label className="text-[9px] font-black uppercase tracking-widest opacity-30 ml-2">Semester Ke- (Angka)</label>
+                    <input type="number" required className={`w-full bg-gray-500/10 border ${cur.border} px-5 py-3.5 rounded-2xl font-bold`} value={formData.semester_number} onChange={(e) => setFormData({...formData, semester_number: parseInt(e.target.value)})} />
                 </div>
-              </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest opacity-30  ml-2">Tempat Cetak Rapor</label>
-                <input 
-                  required
-                  placeholder="Contoh: Jakarta / Bandung"
-                  className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl font-bold focus:outline-none focus:border-blue-500 transition-all`}
-                  value={formData.location}
-                  onChange={(e) => setFormData({...formData, location: e.target.value})}
-                />
-              </div>
+                <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-widest opacity-30 ml-2">Lokasi Penerbitan</label>
+                    <input required className={`w-full bg-gray-500/10 border ${cur.border} px-5 py-3.5 rounded-2xl font-bold`} value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} placeholder="Contoh: Samarinda" />
+                </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest opacity-30  ml-2">Tanggal Cetak Rapor</label>
-                <input 
-                  type="date"
-                  required
-                  className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl font-bold focus:outline-none focus:border-blue-500 transition-all`}
-                  value={formData.report_date}
-                  onChange={(e) => setFormData({...formData, report_date: e.target.value})}
-                />
+                <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase tracking-widest opacity-30 ml-2">Tanggal Rapor</label>
+                    <input required className={`w-full bg-gray-500/10 border ${cur.border} px-5 py-3.5 rounded-2xl font-bold`} value={formData.report_date} onChange={(e) => setFormData({...formData, report_date: e.target.value})} placeholder="Contoh: 25 Maret 2026" />
+                </div>
               </div>
 
               <div className="pt-6 flex gap-3">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-6 py-4 rounded-2xl font-black text-[10px] uppercase opacity-40 transition-all">Batal</button>
-                <button type="submit" className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase shadow-xl shadow-blue-500/20 active:scale-95 transition-all">Simpan Tanggal</button>
+                <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase shadow-xl shadow-blue-600/30 active:scale-95 transition-all">
+                    {loading ? 'Proses...' : 'Simpan Waktu'}
+                </button>
               </div>
             </form>
           </div>

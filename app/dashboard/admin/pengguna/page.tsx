@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../layout';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 // --- ICONS ---
 const IconPlus = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
@@ -12,11 +13,13 @@ const IconSearch = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="n
 const IconChevron = ({ dir }: { dir: 'L' | 'R' }) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points={dir === 'L' ? "15 18 9 12 15 6" : "9 18 15 12 9 6"}></polyline></svg>;
 const IconSort = () => <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="ml-1 opacity-20"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>;
 const IconRefresh = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>;
+const IconRocket = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-5c1.62-2.2 5-3 5-3"></path><path d="M12 15v5s3.03-.55 5-2c2.2-1.62 3-5 3-5"></path></svg>;
 
 type Role = 'Admin' | 'Walikelas' | 'Guru' | 'Siswa';
 
 export default function MasterPengguna() {
   const { cur, t = (key: string) => key } = useTheme();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Role>('Admin');
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +47,28 @@ export default function MasterPengguna() {
     setLoading(false);
   };
 
+  const handleAutopilot = (user: any) => {
+    const isConfirm = confirm(`🚀 AKTIFKAN AUTOPILOT?\n\nMasuk sebagai: ${user.full_name}`);
+    
+    if (isConfirm) {
+      // Simpan role tujuan ke Cookie agar bisa dibaca Middleware (Server Side)
+      const role = Array.isArray(user.roles) ? user.roles[0] : (user.role || 'Siswa');
+      
+      // Set Cookie manual (berlaku selama browser tidak ditutup)
+      document.cookie = `simara_autopilot_role=${role}; path=/`;
+      
+      // Simpan data profil lengkap di sessionStorage (untuk tampilan UI)
+      sessionStorage.setItem('simara_autopilot_user', JSON.stringify({ ...user, is_autopilot: true }));
+
+      let targetPath = '/dashboard';
+      if (role === 'Guru') targetPath = '/dashboard/guru';
+      else if (role === 'Walikelas') targetPath = '/dashboard/walikelas';
+      else if (role === 'Siswa') targetPath = '/dashboard/siswa';
+
+      window.location.href = targetPath;
+    }
+  };
+  
   const processedUsers = useMemo(() => {
     let result = users.filter(user => {
       const userRoles = Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : []);
@@ -123,27 +148,21 @@ export default function MasterPengguna() {
 
     try {
       if (isEditing) {
-        // --- LOGIKA UPDATE ---
         const { error } = await supabase.from('profiles')
           .update({ full_name: formData.full_name, roles: formData.roles })
           .eq('id', formData.id);
         
         if (error) throw error;
-        alert("✅ " + (t('save_success') || "Profil Berhasil Diperbarui!"));
+        alert("✅ Profil Berhasil Diperbarui!");
       } else {
-        // --- LOGIKA PENDAFTARAN USER BARU (Fix Invalid Credentials) ---
-        // 1. Daftarkan Akun ke Supabase Authentication (Login System)
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
-          options: {
-            data: { full_name: formData.full_name }
-          }
+          options: { data: { full_name: formData.full_name } }
         });
 
         if (authError) throw authError;
 
-        // 2. Gunakan UPSERT untuk mengisi profil (Sinkronkan ID dari Auth)
         if (authData.user) {
           const { error: profileError } = await supabase.from('profiles').upsert({
             id: authData.user.id, 
@@ -154,17 +173,13 @@ export default function MasterPengguna() {
           
           if (profileError) throw profileError;
         }
-        alert("✅ Akun Berhasil Didaftarkan! User sekarang bisa login.");
+        alert("✅ Akun Berhasil Didaftarkan!");
       }
 
       setModalOpen(false);
       fetchUsers();
     } catch (err: any) {
-      if (err.message.includes("User already registered")) {
-        alert("🚨 Email sudah digunakan! Silakan gunakan email lain.");
-      } else {
-        alert("🚨 Gagal: " + err.message);
-      }
+      alert("🚨 Gagal: " + err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -196,7 +211,6 @@ export default function MasterPengguna() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tighter uppercase ">Master Pengguna</h1>
@@ -214,7 +228,6 @@ export default function MasterPengguna() {
         </div>
       </div>
 
-      {/* TOOLBAR */}
       <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
         <div className={`flex p-1.5 ${cur.card} border ${cur.border} rounded-2xl w-full lg:w-fit gap-1 shadow-sm overflow-x-auto custom-scrollbar`}>
             {availableRoles.map((tab) => (
@@ -236,7 +249,6 @@ export default function MasterPengguna() {
         </div>
       </div>
 
-      {/* TABLE DATA */}
       <div className={`${cur.card} border ${cur.border} rounded-[2rem] shadow-sm overflow-hidden`}>
         <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -278,7 +290,17 @@ export default function MasterPengguna() {
                     </div>
                     </td>
                     <td className="px-8 py-5 text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end items-center gap-2">
+                        {/* TOMBOL AUTOPILOT DENGAN TULISAN */}
+                        {user.id !== cur?.id && (
+                          <button 
+                            onClick={() => handleAutopilot(user)} 
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 text-white font-black text-[9px] uppercase tracking-widest shadow-lg shadow-orange-600/20 hover:scale-105 active:scale-95 transition-all"
+                          >
+                            <IconRocket />
+                            <span>Autopilot</span>
+                          </button>
+                        )}
                         <button onClick={() => openModal(user)} className={`p-2.5 rounded-xl ${cur.bg} border ${cur.border} hover:text-blue-600 transition-all active:scale-90 shadow-sm`}><IconEdit /></button>
                         <button onClick={() => handleDelete(user.id)} className={`p-2.5 rounded-xl ${cur.bg} border ${cur.border} hover:text-red-500 transition-all active:scale-90 shadow-sm`}><IconTrash /></button>
                     </div>
@@ -290,7 +312,6 @@ export default function MasterPengguna() {
         </div>
       </div>
 
-      {/* PAGINATION CONTROL */}
       {totalPages > 1 && (
           <div className="flex justify-between items-center px-4">
               <p className="text-[10px] font-black uppercase opacity-30 tracking-widest">Halaman {currentPage} dari {totalPages}</p>
@@ -301,10 +322,9 @@ export default function MasterPengguna() {
           </div>
       )}
 
-      {/* MODAL FORM */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className={`${cur.card} w-full max-w-lg rounded-[2.5rem] border ${cur.border} p-10 shadow-2xl animate-in zoom-in-95 duration-500`}>
+          <div className={`${cur.card} w-full max-w-lg rounded-[2.5rem] border ${cur.border} p-10 shadow-2xl animate-in zoom-in-95 duration-300`}>
             <h2 className="text-2xl font-black tracking-tighter mb-1 uppercase">{isEditing ? 'Perbarui' : 'Daftarkan'} Pengguna</h2>
             <p className={`${cur.textMuted} text-[10px] font-black uppercase tracking-[0.2em] mb-8`}>Account Configuration</p>
             <form onSubmit={handleSubmit} className="space-y-6">

@@ -24,7 +24,7 @@ export const useTheme = () => {
 // --- ICONS ---
 const IconDashboard = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>;
 const IconPenilaian = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
-const IconSettings = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
+const IconSettings = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33a1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 const IconLogout = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
 
 export default function GuruLayout({ children }: { children: React.ReactNode }) {
@@ -51,9 +51,32 @@ export default function GuruLayout({ children }: { children: React.ReactNode }) 
   const activeTheme = themes?.[appConfig?.app_theme] || themes?.default || { primary: "#3C50E0" };
   const cur = activeTheme?.modes?.[mode] || themes?.default?.modes?.[mode] || SAFE_FALLBACK;
 
+  // --- LOGIKA STOP AUTOPILOT ---
+  const handleStopAutopilot = () => {
+    sessionStorage.removeItem('simara_autopilot_user');
+    sessionStorage.removeItem('simara_admin_backup');
+    window.location.href = '/dashboard/admin/pengguna';
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+
+      // 1. CEK AUTOPILOT TERLEBIH DAHULU (Bypass agar tidak mental ke Login)
+      const ghostUser = sessionStorage.getItem('simara_autopilot_user');
+      if (ghostUser) {
+        const parsedGhost = JSON.parse(ghostUser);
+        setProfile({ ...parsedGhost, is_autopilot: true });
+        
+        // Tetap ambil config untuk tema
+        const { data: conf } = await supabase.from('app_settings').select('*').single();
+        if (conf) setAppConfig(conf);
+        
+        setLoading(false);
+        return; // STOP: Jangan cek Supabase Auth asli
+      }
+
+      // 2. LOGIKA NORMAL (Jika tidak ada autopilot)
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
@@ -86,6 +109,22 @@ export default function GuruLayout({ children }: { children: React.ReactNode }) 
     <ThemeContext.Provider value={{ cur, mode, setMode, setIsLocked, profile, appConfig, setAppConfig, t }}>
       <div className={`min-h-screen flex transition-colors duration-700 ease-in-out ${cur.bg} ${cur.text} font-sans`}>
         
+        {/* --- FLOATING STOP AUTOPILOT BUTTON --- */}
+        {profile?.is_autopilot && (
+            <div className="fixed bottom-8 right-8 z-[10000] animate-bounce">
+                <button 
+                onClick={handleStopAutopilot}
+                className="group flex items-center gap-3 bg-red-600 text-white pl-4 pr-6 py-3.5 rounded-full font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-red-600/40 hover:bg-red-700 transition-all active:scale-95"
+                >
+                <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                </span>
+                <span>Stop Autopilot</span>
+                </button>
+            </div>
+        )}
+
         {/* XPRIVASI OVERLAY */}
         {isLocked && (
           <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center p-6 backdrop-blur-md animate-in fade-in duration-700">

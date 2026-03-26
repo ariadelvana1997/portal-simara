@@ -30,34 +30,93 @@ export default function TahunAjaran() {
     e.preventDefault();
     setLoading(true);
 
-    if (formData.id) {
-      // Update
-      const { error } = await supabase.from('academic_years').update(formData).eq('id', formData.id);
-      if (!error) alert("Berhasil diperbarui!");
+    // Pisahkan ID agar tidak ikut terkirim ke dalam kolom data
+    const { id, ...dataToSubmit } = formData;
+
+    if (id) {
+      // PROSES UPDATE
+      const { error } = await supabase
+        .from('academic_years')
+        .update(dataToSubmit)
+        .eq('id', id);
+      
+      if (error) {
+        alert("Gagal update: " + error.message);
+      } else {
+        alert("✅ Berhasil diperbarui!");
+        setIsModalOpen(false);
+        resetForm();
+      }
     } else {
-      // Create
-      const { error } = await supabase.from('academic_years').insert([formData]);
-      if (!error) alert("Tahun Ajaran baru ditambahkan!");
+      // PROSES INSERT (Tambah Baru)
+      const { error } = await supabase
+        .from('academic_years')
+        .insert([dataToSubmit]);
+      
+      if (error) {
+        alert("Gagal simpan baru: " + error.message);
+      } else {
+        alert("✅ Tahun Ajaran baru ditambahkan!");
+        setIsModalOpen(false);
+        resetForm();
+      }
     }
 
-    setIsModalOpen(false);
-    resetForm();
     fetchYears();
+    setLoading(false);
   };
 
   const handleActivate = async (id: number) => {
     setLoading(true);
-    // 1. Matikan semua
+    
+    // 1. Matikan semua status aktif (reset semua jadi false)
     await supabase.from('academic_years').update({ is_active: false }).neq('id', 0);
-    // 2. Aktifkan yang dipilih
-    await supabase.from('academic_years').update({ is_active: true }).eq('id', id);
+    
+    // 2. Aktifkan tahun ajaran yang dipilih
+    const { data: selectedYear, error: activateError } = await supabase
+        .from('academic_years')
+        .update({ is_active: true })
+        .eq('id', id)
+        .select()
+        .single();
+    
+    if (activateError) {
+        alert("Gagal mengaktifkan: " + activateError.message);
+    } else if (selectedYear) {
+      // 3. Ambil referensi tanggal rapor terakhir agar tidak hilang datanya
+      const { data: lastDate } = await supabase
+        .from('report_dates')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      // 4. SINKRONISASI KE TABEL REPORT_DATES
+      const semNumber = selectedYear.semester === 'Ganjil' ? '1' : '2';
+      
+      const { error: syncError } = await supabase.from('report_dates').insert([{
+        academic_year: selectedYear.year,
+        semester_number: semNumber,
+        report_date: lastDate?.report_date || '25 Maret 2026',
+        location: lastDate?.location || 'Samarinda'
+      }]);
+
+      if (syncError) {
+        alert("Tahun aktif, tapi gagal sinkron ke rapor: " + syncError.message);
+      } else {
+        alert(`✅ TAHUN AKTIF: ${selectedYear.year} (${selectedYear.semester}). Rapor otomatis terupdate!`);
+      }
+    }
     
     fetchYears();
+    setLoading(false);
   };
 
   const handleDelete = async (id: number) => {
     if (confirm("Hapus tahun ajaran ini?")) {
-      await supabase.from('academic_years').delete().eq('id', id);
+      setLoading(true);
+      const { error } = await supabase.from('academic_years').delete().eq('id', id);
+      if (error) alert("Gagal hapus: " + error.message);
       fetchYears();
     }
   };
@@ -79,7 +138,6 @@ export default function TahunAjaran() {
         </button>
       </div>
 
-      {/* Table List */}
       <div className={`${cur.card} rounded-[3rem] border ${cur.border} overflow-hidden shadow-sm`}>
         <table className="w-full text-left border-collapse">
           <thead>
@@ -110,33 +168,35 @@ export default function TahunAjaran() {
                   </div>
                 </td>
                 <td className="px-8 py-5 text-right space-x-2">
-                  <button onClick={() => { setFormData(y); setIsModalOpen(true); }} className="p-2 hover:text-blue-600 transition-colors opacity-40 hover:opacity-100  font-black text-xs">Edit</button>
-                  <button onClick={() => handleDelete(y.id)} className="p-2 hover:text-red-600 transition-colors opacity-40 hover:opacity-100  font-black text-xs">Hapus</button>
+                  <button onClick={() => { setFormData(y); setIsModalOpen(true); }} className="p-2 hover:text-blue-600 transition-colors opacity-40 hover:opacity-100 font-black text-xs">Edit</button>
+                  <button onClick={() => handleDelete(y.id)} className="p-2 hover:text-red-600 transition-colors opacity-40 hover:opacity-100 font-black text-xs">Hapus</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {years.length === 0 && !loading && (
+            <div className="p-20 text-center opacity-20 font-black uppercase tracking-[0.5em]">Belum ada data tahun ajaran</div>
+        )}
       </div>
 
-      {/* Modal Form */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className={`${cur.card} w-full max-w-md rounded-[3rem] border ${cur.border} p-10 shadow-2xl animate-in zoom-in-95 duration-300`}>
-            <h2 className="text-2xl font-black tracking-tighter  mb-6">{formData.id ? 'Edit' : 'Tambah'} Tahun Ajaran</h2>
+            <h2 className="text-2xl font-black tracking-tighter mb-6">{formData.id ? 'Edit' : 'Tambah'} Tahun</h2>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest opacity-30  ml-2">Tahun Pelajaran</label>
+                <label className="text-[10px] font-black uppercase tracking-widest opacity-30 ml-2">Tahun Pelajaran</label>
                 <input 
                   required
-                  placeholder="Contoh: 2025/2026"
+                  placeholder="2025/2026"
                   className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl focus:outline-none focus:border-blue-500 font-bold transition-all`}
                   value={formData.year}
                   onChange={(e) => setFormData({...formData, year: e.target.value})}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest opacity-30  ml-2">Semester</label>
+                <label className="text-[10px] font-black uppercase tracking-widest opacity-30 ml-2">Semester</label>
                 <select 
                   className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl focus:outline-none focus:border-blue-500 font-bold transition-all appearance-none`}
                   value={formData.semester}
@@ -148,7 +208,9 @@ export default function TahunAjaran() {
               </div>
               <div className="pt-6 flex gap-3">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest opacity-40 hover:opacity-100 transition-all">Batal</button>
-                <button type="submit" className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all">Simpan Data</button>
+                <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50">
+                   {loading ? 'Proses...' : 'Simpan Data'}
+                </button>
               </div>
             </form>
           </div>

@@ -7,12 +7,25 @@ export default function DataSekolah() {
   const { cur } = useTheme();
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  
+  // State disesuaikan dengan data resmi dari Master Referensi
   const [school, setSchool] = useState<any>({
     id: 1, 
-    nama: '', jenjang: '', nss: '', npsn: '',
-    alamat_jalan: '', desa_kelurahan: '', kecamatan: '', kabupaten: '', provinsi: '', kode_pos: '',
-    telp_fax: '', email: '', website: '',
-    nama_ks: '', nuptk_ks: ''
+    nama: 'SMK NEGERI 5 SAMARINDA', // Sinkron 
+    jenjang: 'SMK', 
+    nss: '', 
+    npsn: '',
+    alamat_jalan: 'Jl. KH. Wahid Hasyim No. 75 RT. 08', // Sinkron 
+    desa_kelurahan: 'Sempaja Selatan', 
+    kecamatan: 'Samarinda Utara', 
+    kabupaten: 'Samarinda', 
+    provinsi: 'Kalimantan Timur', 
+    kode_pos: '75119',
+    telp_fax: '', 
+    email: '', 
+    website: '',
+    nama_ks: 'Maryono, S.Pd.', // Sinkron [cite: 20]
+    nuptk_ks: '197208042006041014' // Sinkron [cite: 20]
   });
 
   useEffect(() => {
@@ -21,6 +34,7 @@ export default function DataSekolah() {
 
   const fetchSchoolData = async () => {
     setLoading(true);
+    // Mengambil data dari tabel school_info sesuai struktur kode asli
     const { data, error } = await supabase.from('school_info').select('*').limit(1).maybeSingle();
     if (error) {
       console.error("Gagal ambil data:", error.message);

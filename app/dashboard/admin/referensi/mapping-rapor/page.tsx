@@ -21,16 +21,33 @@ export default function MappingRapor() {
 
   const fetchData = async () => {
     setLoading(true);
+    
+    // 1. Ambil data Mapping
     const { data: mapData } = await supabase
       .from('report_mappings')
       .select(`*, subject:subjects(name, grade_level), group:subject_groups(kode, nama)`)
       .order('sequence_number', { ascending: true });
 
+    // 2. Ambil data Mata Pelajaran
     const { data: subData } = await supabase.from('subjects').select('id, name, grade_level').order('name');
+    
+    // 3. Ambil data Kelompok
     const { data: grpData } = await supabase.from('subject_groups').select('id, kode, nama').eq('is_active', true);
 
+    // --- LOGIKA ANTI-MENUMPUK (Filter Unik berdasarkan Nama & Tingkat) ---
+    const uniqueSubjects = subData ? subData.reduce((acc: any[], current: any) => {
+      // Cek apakah kombinasi Nama + Tingkat sudah ada di penampung (acc)
+      const isDuplicate = acc.find(item => 
+        item.name === current.name && item.grade_level === current.grade_level
+      );
+      if (!isDuplicate) {
+        return acc.concat([current]);
+      }
+      return acc;
+    }, []) : [];
+
     setMappings(mapData || []);
-    setSubjects(subData || []);
+    setSubjects(uniqueSubjects); // Gunakan data yang sudah difilter unik
     setGroups(grpData || []);
     setLoading(false);
   };
@@ -103,26 +120,41 @@ export default function MappingRapor() {
             ))}
           </tbody>
         </table>
+        {mappings.length === 0 && !loading && (
+          <div className="p-20 text-center opacity-20 font-black uppercase tracking-widest">Belum ada data mapping</div>
+        )}
       </div>
 
       {/* MODAL FORM */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
-          <div className={`${cur.card} w-full max-w-md rounded-[3rem] border ${cur.border} p-10 shadow-2xl`}>
-            <h2 className="text-3xl font-black tracking-tighter  mb-8">Plotting Rapor</h2>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className={`${cur.card} w-full max-w-md rounded-[3rem] border ${cur.border} p-10 shadow-2xl animate-in zoom-in-95 duration-300`}>
+            <h2 className="text-3xl font-black tracking-tighter mb-8">Plotting Rapor</h2>
             <form onSubmit={handleSubmit} className="space-y-5">
-              <select required className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl font-bold`} value={formData.subject_id} onChange={(e) => setFormData({...formData, subject_id: e.target.value})}>
-                <option value="">-- Pilih Mata Pelajaran --</option>
-                {subjects.map(s => <option key={s.id} value={s.id}>{s.name} ({s.grade_level})</option>)}
-              </select>
-              <select required className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl font-bold`} value={formData.group_id} onChange={(e) => setFormData({...formData, group_id: e.target.value})}>
-                <option value="">-- Pilih Kelompok Mapel --</option>
-                {groups.map(g => <option key={g.id} value={g.id}>{g.kode} - {g.nama}</option>)}
-              </select>
-              <input type="number" required placeholder="Nomor Urut" className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl font-bold`} value={formData.sequence_number} onChange={(e) => setFormData({...formData, sequence_number: parseInt(e.target.value)})} />
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-widest opacity-30 ml-2">Mata Pelajaran</label>
+                <select required className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl font-bold outline-none focus:border-blue-600 transition-all`} value={formData.subject_id} onChange={(e) => setFormData({...formData, subject_id: e.target.value})}>
+                  <option value="">-- Pilih Mata Pelajaran --</option>
+                  {subjects.map(s => <option key={s.id} value={s.id}>{s.name} ({s.grade_level})</option>)}
+                </select>
+              </div>
+              
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-widest opacity-30 ml-2">Kelompok Mapel</label>
+                <select required className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl font-bold outline-none focus:border-blue-600 transition-all`} value={formData.group_id} onChange={(e) => setFormData({...formData, group_id: e.target.value})}>
+                  <option value="">-- Pilih Kelompok Mapel --</option>
+                  {groups.map(g => <option key={g.id} value={g.id}>{g.kode} - {g.nama}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-widest opacity-30 ml-2">Nomor Urut di Rapor</label>
+                <input type="number" required placeholder="Contoh: 1" className={`w-full bg-gray-500/10 border ${cur.border} ${cur.text} px-6 py-4 rounded-2xl font-bold outline-none focus:border-blue-600 transition-all`} value={formData.sequence_number} onChange={(e) => setFormData({...formData, sequence_number: parseInt(e.target.value)})} />
+              </div>
+
               <div className="pt-6 flex gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-6 py-4 rounded-2xl font-black text-[10px] uppercase opacity-40">Batal</button>
-                <button type="submit" className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase shadow-xl">Simpan</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-6 py-4 rounded-2xl font-black text-[10px] uppercase opacity-40 hover:opacity-100 transition-all">Batal</button>
+                <button type="submit" className="flex-1 bg-blue-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase shadow-xl shadow-blue-500/20 active:scale-95 transition-all">Simpan Mapping</button>
               </div>
             </form>
           </div>

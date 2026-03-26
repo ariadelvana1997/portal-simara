@@ -16,6 +16,10 @@ export default function DataMapel() {
   const [filterGrade, setFilterGrade] = useState('ALL');
   const [selectedRows, setSelectedRows] = useState<string[]>([]); // Menyimpan groupKey
 
+  // --- STATE PAGINATION ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
   // Modal State Mapel
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<any>({
@@ -32,6 +36,11 @@ export default function DataMapel() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Reset ke halaman 1 saat melakukan pencarian atau filter
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterGrade]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -84,10 +93,18 @@ export default function DataMapel() {
     return Object.values(groups);
   }, [subjects, searchTerm, filterGrade]);
 
+  // --- LOGIKA PAGINATION (SLICING DATA) ---
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredAndGroupedSubjects.slice(start, start + pageSize);
+  }, [filteredAndGroupedSubjects, currentPage]);
+
+  const totalPages = Math.ceil(filteredAndGroupedSubjects.length / pageSize);
+
   // --- LOGIKA SELECTION ---
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedRows(filteredAndGroupedSubjects.map((s: any) => s.groupKey));
+      setSelectedRows(paginatedData.map((s: any) => s.groupKey));
     } else {
       setSelectedRows([]);
     }
@@ -234,7 +251,7 @@ export default function DataMapel() {
                   type="checkbox" 
                   className="w-4 h-4 rounded border-gray-300 accent-blue-600"
                   onChange={handleSelectAll}
-                  checked={selectedRows.length === filteredAndGroupedSubjects.length && filteredAndGroupedSubjects.length > 0}
+                  checked={selectedRows.length === paginatedData.length && paginatedData.length > 0}
                 />
               </th>
               <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Mata Pelajaran</th>
@@ -245,7 +262,7 @@ export default function DataMapel() {
             </tr>
           </thead>
           <tbody>
-            {filteredAndGroupedSubjects.map((s: any, idx: number) => (
+            {paginatedData.map((s: any, idx: number) => (
               <tr key={idx} className={`border-b ${cur.border} group hover:bg-gray-500/5 transition-all ${selectedRows.includes(s.groupKey) ? 'bg-blue-600/5' : ''}`}>
                 <td className="px-6 py-5 text-center">
                    <input 
@@ -282,6 +299,29 @@ export default function DataMapel() {
             ))}
           </tbody>
         </table>
+
+        {/* --- UI PAGINATION --- */}
+        <div className={`p-6 border-t ${cur.border} flex flex-col md:flex-row justify-between items-center bg-gray-500/5 gap-4`}>
+            <p className="text-[10px] font-black uppercase opacity-40 ml-4">
+                Menampilkan {paginatedData.length} dari {filteredAndGroupedSubjects.length} Kelompok Mapel • Halaman {currentPage} dari {totalPages || 1}
+            </p>
+            <div className="flex gap-2">
+                <button 
+                    disabled={currentPage === 1 || loading}
+                    onClick={() => setCurrentPage(prev => prev - 1)}
+                    className="px-6 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest border border-black/10 hover:bg-black hover:text-white disabled:opacity-10 transition-all"
+                >
+                    Sebelumnya
+                </button>
+                <button 
+                    disabled={currentPage === totalPages || loading || filteredAndGroupedSubjects.length === 0}
+                    onClick={() => setCurrentPage(prev => prev + 1)}
+                    className="px-6 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest bg-blue-600 text-white shadow-lg shadow-blue-600/20 disabled:opacity-10 active:scale-95 transition-all"
+                >
+                    Selanjutnya
+                </button>
+            </div>
+        </div>
       </div>
 
       {/* MODAL TP */}
