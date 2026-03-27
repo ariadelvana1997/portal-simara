@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { translations } from '@/lib/translations'; 
 import { themes } from '@/lib/themes'; 
 
-// --- BACKUP WARNA (Emergency Fallback jika themes.ts belum terbaca) ---
+// --- BACKUP WARNA ---
 const SAFE_FALLBACK = {
   bg: "bg-gray-50", sidebar: "bg-white", header: "bg-white", text: "text-gray-900", 
   textMuted: "text-gray-500", border: "border-gray-200", hover: "hover:bg-gray-100", 
@@ -21,10 +21,10 @@ export const useTheme = () => {
   return context;
 };
 
-// --- ICONS (LENGKAP & UKURAN KONSISTEN) ---
+// --- ICONS ---
 const IconDashboard = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>;
 const IconUsers = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>;
-const IconRef = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>;
+const IconRef = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>;
 const IconCoKuler = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>;
 const IconStar = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
 const IconBriefcase = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>;
@@ -35,12 +35,21 @@ const IconLogout = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="n
 const IconChevron = ({ open }: { open: boolean }) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={`transition-transform duration-500 ease-out ${open ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"></polyline></svg>;
 const SubIcon = ({ d }: { d: string }) => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d={d}/></svg>;
 
+// --- ICON MODE ANAK (Teddy Bear / Toy Style) ---
+const IconKids = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+    <circle cx="12" cy="13" r="8" />
+    <path d="M12 9v4" />
+    <path d="M9 14s1 1 3 1 3-1 3-1" />
+  </svg>
+);
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mode, setMode] = useState<'light' | 'dark' | 'read'>('light');
   const [isLocked, setIsLocked] = useState(false);
-  const [isXPrivacyEnabled, setIsXPrivacyEnabled] = useState(true);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [unlockPass, setUnlockPass] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -57,11 +66,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return translations[lang]?.[key] || key;
   };
 
-  // --- LOGIKA TEMA + MODE ---
   const activeTheme = themes?.[appConfig?.app_theme] || themes?.default || { primary: "#3C50E0" };
   const cur = activeTheme?.modes?.[mode] || themes?.default?.modes?.[mode] || SAFE_FALLBACK;
 
-  // --- LOGIKA BERHENTI AUTOPILOT ---
   const handleStopAutopilot = () => {
     sessionStorage.removeItem('simara_autopilot_user');
     sessionStorage.removeItem('simara_admin_backup');
@@ -72,23 +79,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const fetchData = async () => {
       setLoading(true);
       try {
-        // 1. PRIORITAS: CEK MODE AUTOPILOT (Penentu kemenangan agar tidak mental ke login)
         const ghostUser = sessionStorage.getItem('simara_autopilot_user');
         if (ghostUser) {
           const parsedGhost = JSON.parse(ghostUser);
           setProfile({ ...parsedGhost, is_autopilot: true });
-          
-          // Tetap ambil config aplikasi untuk tema
           const { data: configData } = await supabase.from('app_settings').select('*').single();
           if (configData) {
             setAppConfig(configData);
-            if (configData.is_xprivacy_enabled !== undefined) setIsXPrivacyEnabled(configData.is_xprivacy_enabled);
           }
           setLoading(false);
-          return; // STOP: Jangan cek Supabase Auth asli
+          return;
         }
 
-        // 2. LOGIKA NORMAL (Jika tidak sedang menyamar)
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
         const [profRes, confRes] = await Promise.all([
@@ -98,7 +100,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (profRes.data) setProfile(profRes.data);
         if (confRes.data) {
           setAppConfig(confRes.data);
-          if (confRes.data.is_xprivacy_enabled !== undefined) setIsXPrivacyEnabled(confRes.data.is_xprivacy_enabled);
         }
       } catch (err) { console.error("Sync Error", err); }
       setLoading(false);
@@ -108,19 +109,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
 
-  const toggleXPrivacy = async () => {
-    const newState = !isXPrivacyEnabled;
-    setIsXPrivacyEnabled(newState);
-    await supabase.from('app_settings').update({ is_xprivacy_enabled: newState }).eq('id', 1);
-  };
-
   if (loading) return <div className="min-h-screen bg-white flex items-center justify-center font-black opacity-20 uppercase tracking-[0.3em]">Syncing...</div>;
 
   return (
     <ThemeContext.Provider value={{ cur, mode, setMode, setIsLocked, profile, appConfig, setAppConfig, t }}>
       <div className={`min-h-screen flex transition-colors duration-700 ease-in-out ${cur.bg} ${cur.text} font-sans`}>
         
-        {/* --- FLOATING STOP AUTOPILOT BUTTON --- */}
         {profile?.is_autopilot && (
             <div className="fixed bottom-8 right-8 z-[10000] animate-bounce-slow">
                 <button 
@@ -136,7 +130,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
         )}
 
-        {/* XPRIVASI OVERLAY */}
         {isLocked && (
           <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center p-6 backdrop-blur-md animate-in fade-in duration-700">
               <div className="w-full max-w-sm text-center space-y-8 text-white">
@@ -154,10 +147,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         )}
 
-        {/* OVERLAY MOBILE */}
         {isSidebarOpen && <div className="fixed inset-0 bg-black/40 z-[60] md:hidden backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setSidebarOpen(false)}></div>}
 
-        {/* SIDEBAR */}
         <aside className={`fixed inset-y-0 left-0 z-[70] border-r transition-[width,transform] duration-500 md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0 w-72' : '-translate-x-full'} ${isCollapsed ? 'md:w-20' : 'md:w-72'} ${cur.sidebar} ${cur.border} flex flex-col shadow-2xl md:shadow-none`}>
           <div className={`h-16 flex items-center border-b shrink-0 ${cur.border} ${isCollapsed && !isSidebarOpen ? 'justify-center' : 'px-6'}`}>
             <span className="font-black text-xl tracking-tighter " style={{ color: activeTheme.primary }}>{isCollapsed && !isSidebarOpen ? 'S' : 'SIMARA v1.0'}</span>
@@ -169,7 +160,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             
             <hr className={`mx-2 my-4 border-t ${cur.border} opacity-50`} />
 
-            {/* 1. MASTER REFERENSI */}
             <NavGroup icon={<IconRef />} label={t('master_ref')} isCollapsed={isCollapsed} isSidebarOpen={isSidebarOpen} cur={cur} primary={activeTheme.primary} isOpen={openGroup === 'ref'} onClick={() => setOpenGroup(openGroup === 'ref' ? null : 'ref')} setSidebarOpen={setSidebarOpen}
               submenus={[
                 { label: t('school_data'), href: "/dashboard/admin/referensi/sekolah", icon: <SubIcon d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/> },
@@ -187,7 +177,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               ]}
             />
 
-            {/* 2. MASTER KO-KURIKULER */}
             <NavGroup icon={<IconCoKuler />} label={t('master_kokul')} isCollapsed={isCollapsed} isSidebarOpen={isSidebarOpen} cur={cur} primary={activeTheme.primary} isOpen={openGroup === 'kokul'} onClick={() => setOpenGroup(openGroup === 'kokul' ? null : 'kokul')} setSidebarOpen={setSidebarOpen}
               submenus={[
                 { label: t('theme_list'), href: "/dashboard/admin/kokurikuler/tema", icon: <SubIcon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/> },
@@ -196,11 +185,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               ]}
             />
 
-            {/* MASTER PKL & P5 */}
             <NavItem href="/dashboard/admin/p5" icon={<IconStar />} label={t('p5')} active={pathname.includes('/p5')} isCollapsed={isCollapsed} isSidebarOpen={isSidebarOpen} cur={cur} primary={activeTheme.primary} setSidebarOpen={setSidebarOpen} />
             <NavItem href="/dashboard/admin/pkl" icon={<IconBriefcase />} label={t('pkl')} active={pathname.includes('/pkl')} isCollapsed={isCollapsed} isSidebarOpen={isSidebarOpen} cur={cur} primary={activeTheme.primary} setSidebarOpen={setSidebarOpen} />
 
-            {/* 3. MASTER PENILAIAN */}
             <NavGroup icon={<IconEdit />} label={t('master_nilai')} isCollapsed={isCollapsed} isSidebarOpen={isSidebarOpen} cur={cur} primary={activeTheme.primary} isOpen={openGroup === 'nilai'} onClick={() => setOpenGroup(openGroup === 'nilai' ? null : 'nilai')} setSidebarOpen={setSidebarOpen}
               submenus={[
                 { label: t('penilaian'), href: "/dashboard/admin/nilai", icon: <SubIcon d="M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/> },
@@ -210,7 +197,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               ]}
             />
 
-            {/* 4. MASTER CETAK RAPOR */}
             <NavGroup icon={<IconPrinter />} label={t('master_cetak')} isCollapsed={isCollapsed} isSidebarOpen={isSidebarOpen} cur={cur} primary={activeTheme.primary} isOpen={openGroup === 'cetak'} onClick={() => setOpenGroup(openGroup === 'cetak' ? null : 'cetak')} setSidebarOpen={setSidebarOpen}
               submenus={[
                 { label: t('rapor_biasa'), href: "/dashboard/admin/rapor", icon: <SubIcon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8"/> }
@@ -228,7 +214,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </aside>
 
-        {/* MAIN AREA */}
         <div className="flex-1 flex flex-col min-w-0 transition-all duration-500">
           <header className={`h-16 flex items-center justify-between px-4 md:px-8 border-b ${cur.border} ${cur.header} sticky top-0 z-[55] backdrop-blur-md`}>
             <div className="flex items-center gap-4">
@@ -255,11 +240,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   
                   <div className={`w-[1px] h-4 ${cur.border} mx-1 opacity-50`}></div>
                   
-                  <button onClick={toggleXPrivacy} className={`px-3 py-1.5 ${cur.radius} text-[10px] font-black transition-all ${isXPrivacyEnabled ? 'text-blue-600 bg-blue-600/10' : 'text-gray-400 bg-gray-100'}`}>
-                    {isXPrivacyEnabled ? 'X ON' : 'X OFF'}
+                  {/* --- TOMBOL MODE ANAK (MENGGANTIKAN X ON) --- */}
+                  <button 
+                    onClick={() => alert("🍭 Fitur Mode Anak sedang dalam tahap pengembangan!")}
+                    title="Mode Anak"
+                    className={`px-3 py-1.5 ${cur.radius} text-[10px] font-black transition-all bg-pink-500/10 text-pink-600 hover:bg-pink-500 hover:text-white active:scale-90`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <IconKids />
+                      <span className="hidden lg:inline">MODE ANAK</span>
+                    </div>
                   </button>
 
-                  <button onClick={() => isXPrivacyEnabled && setIsLocked(true)} className={`px-3 py-1.5 ${cur.radius} text-[10px] font-black transition-all ${isXPrivacyEnabled ? 'bg-red-500 text-white shadow-lg active:rotate-12' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                  <button onClick={() => setIsLocked(true)} className={`px-3 py-1.5 ${cur.radius} text-[10px] font-black transition-all bg-red-500 text-white shadow-lg active:rotate-12`}>
                     LOCK
                   </button>
                </div>
