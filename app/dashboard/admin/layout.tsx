@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { translations } from '@/lib/translations'; 
 import { themes } from '@/lib/themes'; 
 
-// --- BACKUP WARNA ---
+// --- BACKUP WARNA (Emergency Fallback jika themes.ts belum terbaca) ---
 const SAFE_FALLBACK = {
   bg: "bg-gray-50", sidebar: "bg-white", header: "bg-white", text: "text-gray-900", 
   textMuted: "text-gray-500", border: "border-gray-200", hover: "hover:bg-gray-100", 
@@ -21,7 +21,7 @@ export const useTheme = () => {
   return context;
 };
 
-// --- ICONS ---
+// --- ICONS (LENGKAP & UKURAN KONSISTEN) ---
 const IconDashboard = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>;
 const IconUsers = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>;
 const IconRef = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>;
@@ -80,26 +80,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setLoading(true);
       try {
         const ghostUser = sessionStorage.getItem('simara_autopilot_user');
+        
+        // 1. PRIORITAS: MODE AUTOPILOT
         if (ghostUser) {
           const parsedGhost = JSON.parse(ghostUser);
           setProfile({ ...parsedGhost, is_autopilot: true });
           const { data: configData } = await supabase.from('app_settings').select('*').single();
           if (configData) {
             setAppConfig(configData);
+            // SINKRONKAN WARNA KE CSS VARIABLE (Penting untuk HP)
+            document.documentElement.style.setProperty('--primary-color', configData.primary_color);
           }
           setLoading(false);
           return;
         }
 
+        // 2. LOGIKA NORMAL
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
         const [profRes, confRes] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),
           supabase.from('app_settings').select('*').single()
         ]);
+        
         if (profRes.data) setProfile(profRes.data);
         if (confRes.data) {
           setAppConfig(confRes.data);
+          // SINKRONKAN WARNA KE CSS VARIABLE JUGA DI SINI
+          document.documentElement.style.setProperty('--primary-color', confRes.data.primary_color);
         }
       } catch (err) { console.error("Sync Error", err); }
       setLoading(false);
@@ -240,7 +248,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   
                   <div className={`w-[1px] h-4 ${cur.border} mx-1 opacity-50`}></div>
                   
-                  {/* --- TOMBOL MODE ANAK (MENGGANTIKAN X ON) --- */}
+                  {/* --- TOMBOL MODE ANAK (Teddy Bear) --- */}
                   <button 
                     onClick={() => alert("🍭 Fitur Mode Anak sedang dalam tahap pengembangan!")}
                     title="Mode Anak"
@@ -252,7 +260,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </div>
                   </button>
 
-                  {/* Tombol LOCK (Mandiri) */}
                   <button onClick={() => setIsLocked(true)} className={`px-3 py-1.5 ${cur.radius} text-[10px] font-black transition-all bg-red-500 text-white shadow-lg active:rotate-12`}>
                     LOCK
                   </button>
