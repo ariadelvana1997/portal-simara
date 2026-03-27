@@ -62,11 +62,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mode, setMode] = useState<'light' | 'dark' | 'read'>('light');
   const router = useRouter();
 
+  // --- 1. SINKRONISASI TEMA (FIX WARNA MOBILE VS DESKTOP) ---
+  useEffect(() => {
+    const savedMode = localStorage.getItem('simara_theme_mode') as any;
+    if (savedMode) setMode(savedMode);
+  }, []);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    if (mode === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.add('light');
+    }
+    localStorage.setItem('simara_theme_mode', mode);
+  }, [mode]);
+
   useEffect(() => {
     const initializeDashboard = async () => {
       setLoading(true);
 
-      // 1. AMBIL DATA USER & PROFILE
+      // --- 2. LOGIKA BYPASS AUTOPILOT ---
+      const ghostUser = sessionStorage.getItem('simara_autopilot_user');
+      if (ghostUser) {
+        const parsedGhost = JSON.parse(ghostUser);
+        setProfile({ ...parsedGhost, is_autopilot: true });
+        const { data: configData } = await supabase.from('app_settings').select('*').single();
+        if (configData) {
+          setAppConfig(configData);
+          document.documentElement.style.setProperty('--primary-color', configData.primary_color);
+        }
+        setLoading(false);
+        return; 
+      }
+
+      // 3. AMBIL DATA USER & PROFILE (NORMAL)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push('/login');
@@ -76,7 +107,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
       setProfile(profileData);
 
-      // 2. AMBIL PENGATURAN APLIKASI
+      // 4. AMBIL PENGATURAN APLIKASI
       const { data: configData } = await supabase.from('app_settings').select('*').single();
       
       if (configData) {
@@ -90,7 +121,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           document.body.style.fontFamily = `'${configData.app_font}', sans-serif`;
         }
 
-        // 3. LOGIKA MAINTENANCE
+        // 5. LOGIKA MAINTENANCE
         const isAdmin = profileData?.roles?.includes('Admin');
         if (configData.is_maintenance && !isAdmin) {
           router.push('/maintenance');
@@ -104,7 +135,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     initializeDashboard();
   }, [router]);
 
-  // Memantau perubahan appConfig secara reaktif (Font, Judul, dan memaksa re-render Tema)
+  // Memantau perubahan appConfig secara reaktif
   useEffect(() => {
     if (appConfig.app_font) {
       document.documentElement.style.setProperty('font-family', `'${appConfig.app_font}', sans-serif`, 'important');
@@ -141,7 +172,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <ThemeContext.Provider value={{ profile, appConfig, setAppConfig, loading, cur, mode, setMode }}>
-      {/* OVERLAY TEMA DINAMIS - Diletakkan di sini agar merespon state appConfig.ui_theme */}
+      {/* OVERLAY TEMA DINAMIS */}
       <ThemeOverlay theme={appConfig.ui_theme} />
       
       {children}

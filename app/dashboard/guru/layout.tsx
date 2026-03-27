@@ -68,32 +68,55 @@ export default function GuruLayout({ children }: { children: React.ReactNode }) 
     window.location.href = '/dashboard/admin/pengguna';
   };
 
+  // --- 1. SINKRONISASI MODE GELAP (LOCALSTORAGE) ---
+  useEffect(() => {
+    const savedMode = localStorage.getItem('simara_theme_mode') as any;
+    if (savedMode) setMode(savedMode);
+  }, []);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    if (mode === 'dark') root.classList.add('dark');
+    else root.classList.add('light');
+    localStorage.setItem('simara_theme_mode', mode);
+  }, [mode]);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // 1. PRIORITAS: CEK MODE AUTOPILOT (Penentu Kemenangan)
         const ghostUser = sessionStorage.getItem('simara_autopilot_user');
+        
+        // PRIORITAS: CEK MODE AUTOPILOT
         if (ghostUser) {
           const parsedGhost = JSON.parse(ghostUser);
           setProfile({ ...parsedGhost, is_autopilot: true });
           
           const { data: configData } = await supabase.from('app_settings').select('*').single();
-          if (configData) setAppConfig(configData);
-          
+          if (configData) {
+            setAppConfig(configData);
+            // SINKRONKAN WARNA KE CSS VARIABLE (PENTING UNTUK HP)
+            document.documentElement.style.setProperty('--primary-color', configData.primary_color);
+          }
           setLoading(false);
-          return; // STOP: Jangan cek Supabase Auth asli
+          return;
         }
 
-        // 2. LOGIKA NORMAL
+        // LOGIKA NORMAL
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
         const [profRes, confRes] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),
           supabase.from('app_settings').select('*').single()
         ]);
+        
         if (profRes.data) setProfile(profRes.data);
-        if (confRes.data) setAppConfig(confRes.data);
+        if (confRes.data) {
+          setAppConfig(confRes.data);
+          // SINKRONKAN WARNA KE CSS VARIABLE JUGA DI SINI (PENTING UNTUK HP)
+          document.documentElement.style.setProperty('--primary-color', confRes.data.primary_color);
+        }
       } catch (err) { console.error("Sync Error", err); }
       setLoading(false);
     };
