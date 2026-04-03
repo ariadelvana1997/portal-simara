@@ -1,10 +1,10 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { useTheme } from '@/app/providers';
+import { useTheme } from '../layout'; // Mengambil context dari layout guru
 import { supabase } from '@/lib/supabase';
 
-export default function ModulCetakRaporSempurna() {
-  const { cur } = useTheme();
+export default function RaporWalikelas() {
+  const { cur, profile } = useTheme();
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'list' | 'identity' | 'report'>('list');
 
@@ -19,7 +19,6 @@ export default function ModulCetakRaporSempurna() {
   const [attendance, setAttendance] = useState<any>(null);
   const [allTPs, setAllTPs] = useState<any[]>([]);
   const [ekskul, setEkskul] = useState<any[]>([]);
-  // STATE BARU: Untuk menyimpan data Kokurikuler (P5)
   const [kokurikuler, setKokurikuler] = useState<any[]>([]);
 
   // --- PRINT & OVERRIDE SETTINGS ---
@@ -55,20 +54,30 @@ export default function ModulCetakRaporSempurna() {
     return namaAsli;
   };
 
-  useEffect(() => { fetchInitial(); }, []);
+  useEffect(() => { 
+    if (profile) fetchInitial(); 
+  }, [profile]);
 
   const fetchInitial = async () => {
     setLoading(true);
     try {
+        // SINKRONISASI: Filter kelas berdasarkan Wali Kelas yang sedang login
         const { data: cls } = await supabase
             .from('classes')
             .select(`*, profiles:profiles!walikelas_id(*)`)
+            .eq('walikelas_id', profile.id)
             .order('nama_kelas');
 
         const { data: sch } = await supabase.from('school_info').select('*').single();
         const { data: dt } = await supabase.from('report_dates').select('*').order('created_at', { ascending: false }).limit(1).single();
         
-        if (cls) setClasses(cls);
+        if (cls) {
+            setClasses(cls);
+            // Jika Guru hanya punya 1 kelas walas, langsung muat siswanya
+            if (cls.length === 1) {
+                loadStudents(cls[0]);
+            }
+        }
         setSchool(sch); 
         setReportDate(dt);
     } catch (e) {
@@ -110,7 +119,6 @@ export default function ModulCetakRaporSempurna() {
         supabase.from('learning_objectives').select('*'),
         supabase.from('attendance_records').select('*').eq('student_id', student.student_id).maybeSingle(),
         supabase.from('extracurricular_members').select(`*, ekskul:extracurriculars(*)`).eq('student_id', student.student_id),
-        // FETCH DATA KOKURIKULER (Deskripsi yang sudah di-generate Guru)
         supabase.from('kokurikuler_descriptions')
                 .select(`description_text, group:kokurikuler_groups(group_name, activity:kokurikuler_activities(activity_name))`)
                 .eq('student_id', student.student_id)
@@ -256,7 +264,6 @@ export default function ModulCetakRaporSempurna() {
                 <tbody>{grades.map((g, i) => (<tr key={g.id} className="align-top"><td className="border-1 border-black p-2 text-center">{i + 1}</td><td className="border-1 border-black p-2 font-medium">{g.subject?.name}</td><td className="border-1 border-black p-2 text-center font-bold text-[14px]">{g.score}</td><td className="border-1 border-black p-2 text-[10px] text-justify leading-snug">{getDesc(g)}</td></tr>))}</tbody>
               </table>
 
-              {/* --- UPDATE: BAGIAN KOKURIKULER DINAMIS --- */}
               <div className="mt-10 mb-2 space-y-1 avoid-break">
                 <h3 className="font-bold uppercase tracking-wide">Kokurikuler</h3>
                 <div className="border-1 border-black p-3 space-y-4 text-justify leading-relaxed">
@@ -325,28 +332,32 @@ export default function ModulCetakRaporSempurna() {
   return (
     <div className={`space-y-12 animate-in fade-in duration-700 p-4 md:p-10 ${cur.text}`}>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div><h1 className="text-5xl font-black tracking-tighter uppercase leading-none ">Cetak Rapor</h1><p className="opacity-40 text-[10px] font-black uppercase tracking-[0.4em] mt-3">Silahkan pilih Rombel untuk memulai proses pencetakan.</p></div>
-        {selectedClass && (<button onClick={() => { setSelectedClass(null); setStudents([]); }} className="bg-black text-white px-8 py-4 rounded-[2rem] font-black text-[10px] uppercase shadow-2xl active:scale-95 transition-all">Kembali ke Daftar Rombel</button>)}
+        <div><h1 className="text-5xl font-black tracking-tighter uppercase leading-none ">Cetak <span className="text-blue-600">Rapor</span></h1><p className="opacity-40 text-[10px] font-black uppercase tracking-[0.4em] mt-3">Silahkan pilih Rombel binaan Anda untuk mencetak rapor.</p></div>
+        {selectedClass && classes.length > 1 && (<button onClick={() => { setSelectedClass(null); setStudents([]); }} className="bg-black text-white px-8 py-4 rounded-[2rem] font-black text-[10px] uppercase shadow-2xl active:scale-95 transition-all">Kembali ke Daftar Rombel</button>)}
       </div>
 
       {loading ? (
         <div className="flex flex-col items-center py-20 gap-4"><div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div><p className="text-[10px] font-black uppercase opacity-40 text-center">Menyinkronkan data...</p></div>
       ) : !selectedClass ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {classes.map((c) => (
-            <div key={c.id} onClick={() => loadStudents(c)} className={`${cur.card} border-4 border-black/5 p-8 rounded-[3.5rem] space-y-6 shadow-xl hover:shadow-2xl hover:border-blue-600/30 hover:-translate-y-2 cursor-pointer transition-all duration-500 group relative overflow-hidden`}>
-              <div className="w-16 h-16 bg-blue-600/10 rounded-[1.5rem] flex items-center justify-center group-hover:bg-blue-600 transition-all text-blue-600 group-hover:text-white"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10"/></svg></div>
-              <div><h3 className="text-2xl font-black tracking-tighter uppercase">{c.nama_kelas}</h3><p className="text-[10px] font-bold opacity-40 uppercase mt-1">Wali: {formatNamaGelar(c.profiles?.full_name || 'Belum diatur')}</p></div>
-              <div className="pt-4 border-t border-black/5 flex items-center gap-2 text-blue-600 text-[10px] font-black uppercase tracking-widest">Pilih Kelas <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
-            </div>
-          ))}
+          {classes.length === 0 ? (
+              <div className="col-span-full py-20 text-center opacity-30 font-black uppercase tracking-[0.5em] border-4 border-dashed border-black/5 rounded-[4rem]">Anda belum ditugaskan sebagai Wali Kelas.</div>
+          ) : (
+              classes.map((c) => (
+                <div key={c.id} onClick={() => loadStudents(c)} className={`${cur.card} border-4 border-black/5 p-8 rounded-[3.5rem] space-y-6 shadow-xl hover:shadow-2xl hover:border-blue-600/30 hover:-translate-y-2 cursor-pointer transition-all duration-500 group relative overflow-hidden`}>
+                  <div className="w-16 h-16 bg-blue-600/10 rounded-[1.5rem] flex items-center justify-center group-hover:bg-blue-600 transition-all text-blue-600 group-hover:text-white"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10"/></svg></div>
+                  <div><h3 className="text-2xl font-black tracking-tighter uppercase">{c.nama_kelas}</h3><p className="text-[10px] font-bold opacity-40 uppercase mt-1">Wali: Anda</p></div>
+                  <div className="pt-4 border-t border-black/5 flex items-center gap-2 text-blue-600 text-[10px] font-black uppercase tracking-widest">Buka Siswa <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+                </div>
+              ))
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {students.map((s) => (
             <div key={s.student_id} className={`${cur.card} border-4 border-black/5 p-8 rounded-[3.5rem] space-y-6 shadow-xl hover:shadow-2xl transition-all duration-500`}>
               <div><h3 className="text-xl font-black tracking-tighter uppercase leading-none">{s.profiles?.full_name}</h3><p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-3 ">NISN: {s.profiles?.nisn || '-'}</p></div>
-              <div className="flex gap-3"><button onClick={() => prepareCetak(s, 'identity')} className="flex-1 bg-gray-500/10 py-4 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-gray-500/20 transition-all">Identitas</button><button onClick={() => prepareCetak(s, 'report')} className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-blue-600/20 active:scale-95 transition-all">Isi Rapor</button></div>
+              <div className="flex gap-3"><button onClick={() => prepareCetak(s, 'identity')} className="flex-1 bg-gray-500/10 py-4 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-gray-500/20 transition-all">Identitas</button><button onClick={() => prepareCetak(s, 'report')} className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-blue-600/20 active:scale-95 transition-all">Cetak Rapor</button></div>
             </div>
           ))}
         </div>

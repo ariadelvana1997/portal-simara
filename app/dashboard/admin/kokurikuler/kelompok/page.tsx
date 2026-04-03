@@ -35,8 +35,9 @@ export default function KelompokKokurikuler() {
 
   const fetchData = async () => {
     setLoading(true);
+    // UPDATE: Menggunakan teacher_id untuk sinkronisasi dengan Sidebar Guru
     const [gRes, tRes, aRes, cRes, sRes] = await Promise.all([
-      supabase.from('kokurikuler_groups').select('*, coordinator:profiles!coordinator_id(full_name), activity:kokurikuler_activities!activity_id(activity_name), members_count:kokurikuler_group_members(count)').order('created_at', { ascending: false }),
+      supabase.from('kokurikuler_groups').select('*, teacher:profiles!teacher_id(full_name), activity:kokurikuler_activities!activity_id(activity_name), members_count:kokurikuler_group_members(count)').order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, full_name').contains('roles', ['Guru']),
       supabase.from('kokurikuler_activities').select('id, activity_name'),
       supabase.from('classes').select('*').order('nama_kelas'),
@@ -56,11 +57,12 @@ export default function KelompokKokurikuler() {
 
   const handleSaveGroup = async (e: React.FormEvent) => {
     e.preventDefault();
+    // UPDATE: Memastikan coordinator_id dari form masuk ke kolom teacher_id di database
     const payload = { 
         group_name: formData.group_name, 
         tingkat: formData.tingkat, 
         fase: formData.fase, 
-        coordinator_id: formData.coordinator_id, 
+        teacher_id: formData.coordinator_id, // Map ke kolom teacher_id
         activity_id: formData.activity_id 
     };
 
@@ -75,6 +77,9 @@ export default function KelompokKokurikuler() {
       alert("✅ Data Kelompok Tersimpan!");
       setModalOpen(false);
       fetchData();
+    } else {
+      console.error("Save Error:", res.error);
+      alert("❌ Gagal menyimpan data.");
     }
   };
 
@@ -139,7 +144,8 @@ export default function KelompokKokurikuler() {
                        <span className="bg-gray-100 px-2 py-0.5 rounded-md text-gray-500">{g.fase}</span>
                     </div>
                   </td>
-                  <td className="px-10 py-7 text-gray-900 font-black">{g.coordinator?.full_name || '-'}</td>
+                  {/* UPDATE: Menampilkan nama dari alias 'teacher' */}
+                  <td className="px-10 py-7 text-gray-900 font-black">{g.teacher?.full_name || '-'}</td>
                   <td className="px-10 py-7 text-gray-500 font-medium lowercase first-letter:uppercase">"{g.activity?.activity_name || '-'}"</td>
                   <td className="px-10 py-7 text-center">
                      <button onClick={() => openMemberModal(g)} className="flex items-center justify-center gap-3 mx-auto bg-gray-900 text-white px-6 py-3 rounded-2xl hover:bg-blue-600 transition-all shadow-lg shadow-black/20 group/btn active:scale-95">
@@ -148,7 +154,7 @@ export default function KelompokKokurikuler() {
                   </td>
                   <td className="px-10 py-7 text-right">
                     <div className="flex justify-end gap-3">
-                       <button onClick={() => { setIsEditing(true); setFormData({ id: g.id, group_name: g.group_name, tingkat: g.tingkat, fase: g.fase, coordinator_id: g.coordinator_id, activity_id: g.activity_id }); setModalOpen(true); }} className="p-3 rounded-2xl border bg-white text-gray-900 hover:text-blue-600 hover:border-blue-600 shadow-sm active:scale-90 transition-all"><IconEdit /></button>
+                       <button onClick={() => { setIsEditing(true); setFormData({ id: g.id, group_name: g.group_name, tingkat: g.tingkat, fase: g.fase, coordinator_id: g.teacher_id, activity_id: g.activity_id }); setModalOpen(true); }} className="p-3 rounded-2xl border bg-white text-gray-900 hover:text-blue-600 hover:border-blue-600 shadow-sm active:scale-90 transition-all"><IconEdit /></button>
                        <button onClick={async () => { if(confirm("Hapus kelompok?")) { await supabase.from('kokurikuler_groups').delete().eq('id', g.id); fetchData(); } }} className="p-3 rounded-2xl border bg-white text-gray-900 hover:text-red-500 hover:border-red-500 shadow-sm active:scale-90 transition-all"><IconTrash /></button>
                     </div>
                   </td>
@@ -163,7 +169,7 @@ export default function KelompokKokurikuler() {
       {isModalOpen && (
         <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
           <div className={`${cur.card} w-full max-w-2xl rounded-[3rem] border ${cur.border} shadow-2xl overflow-hidden`}>
-            <div className="p-10 border-b ${cur.border} flex justify-between items-center bg-gray-500/5">
+            <div className="p-10 border-b border-gray-100 flex justify-between items-center bg-gray-500/5">
               <h2 className="font-black text-[11px] uppercase tracking-[0.2em] text-gray-900">{isEditing ? 'Update Detail' : 'Buat Baru'} Kelompok</h2>
               <button onClick={() => setModalOpen(false)} className="text-3xl font-light text-gray-400 hover:text-gray-900 transition-all">×</button>
             </div>
@@ -206,12 +212,11 @@ export default function KelompokKokurikuler() {
         </div>
       )}
 
-      {/* MODAL 2: MANAJEMEN ANGGOTA (Layout Dirapikan Sesuai Permintaan) */}
+      {/* MODAL 2: MANAJEMEN ANGGOTA */}
       {isMemberModalOpen && (
         <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in zoom-in-95 duration-300">
           <div className={`${cur.card} w-full max-w-5xl rounded-[3.5rem] border ${cur.border} shadow-2xl overflow-hidden flex flex-col max-h-[85vh]`}>
-            {/* Header: Padding dikurangi sedikit agar rapat */}
-            <div className="p-7 px-9 border-b ${cur.border} flex justify-between items-center bg-gray-500/5">
+            <div className="p-7 px-9 border-b border-gray-100 flex justify-between items-center bg-gray-500/5">
               <div className="space-y-0.5">
                 <h2 className="font-black text-xl text-gray-900 uppercase tracking-tighter">Anggota: {selectedGroup?.group_name}</h2>
                 <p className="text-[9px] font-black text-blue-600 uppercase tracking-[0.2em]">{currentGroupMembers.length} Siswa Terpilih</p>
@@ -219,7 +224,6 @@ export default function KelompokKokurikuler() {
               <button onClick={() => setMemberModalOpen(false)} className="text-3xl font-light text-gray-900 hover:rotate-90 transition-all duration-300">×</button>
             </div>
 
-            {/* TAB NAVIGASI KELAS: Padding dikurangi rapat (p-5) */}
             <div className="flex overflow-x-auto gap-2 p-5 px-8 bg-white border-b border-gray-100 custom-scrollbar">
                 {classes.map(cls => (
                     <button key={cls.id} onClick={() => setActiveClassTab(cls.id)} className={`px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shrink-0 active:scale-90 ${activeClassTab === cls.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-gray-50 border border-gray-100 text-gray-400 hover:text-gray-900'}`}>
@@ -228,7 +232,6 @@ export default function KelompokKokurikuler() {
                 ))}
             </div>
 
-            {/* GRID SISWA: Padding & Gap diperkecil (p-6, gap-3) agar rapat & tidak meluber */}
             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-3 custom-scrollbar bg-gray-50/20">
                 {mappedStudents.filter(s => s.class_id === activeClassTab).length === 0 ? (
                     <div className="col-span-full text-center py-20">
@@ -252,8 +255,7 @@ export default function KelompokKokurikuler() {
                 ))}
             </div>
 
-            {/* Footer: Padding dirapatkan (p-6) */}
-            <div className="p-6 border-t ${cur.border} flex justify-end bg-white">
+            <div className="p-6 border-t border-gray-100 flex justify-end bg-white">
                 <button onClick={() => setMemberModalOpen(false)} className="bg-gray-900 text-white px-12 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-xl hover:bg-blue-600">Selesai & Simpan Data</button>
             </div>
           </div>

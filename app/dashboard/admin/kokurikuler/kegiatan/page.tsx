@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 // --- ICONS ---
 const IconEdit = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
 const IconTrash = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
-const IconGear = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
+const IconGear = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33a1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 
 export default function MasterKegiatanKokurikuler() {
   const { cur, profile } = useTheme();
@@ -14,7 +14,6 @@ export default function MasterKegiatanKokurikuler() {
   const [themes, setThemes] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
 
-  // States
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [isModalOpen, setModalOpen] = useState(false);
   const [isProfilModalOpen, setProfilModalOpen] = useState(false);
@@ -22,39 +21,45 @@ export default function MasterKegiatanKokurikuler() {
   
   const [selectedSub, setSelectedSub] = useState<any>(null);
   const [savedProfiles, setSavedProfiles] = useState<any[]>([]);
-  const [formData, setFormData] = useState({ id: '', theme_id: '', activity_name: '', final_objective: '', nomor_urut: 1 });
+  
+  // UPDATE: Tambahkan graduate_profile ke form state
+  const [formData, setFormData] = useState({ 
+    id: '', 
+    theme_id: '', 
+    activity_name: '', 
+    final_objective: '', 
+    nomor_urut: 1,
+    graduate_profile: [] as string[] 
+  });
 
-  // MASTER DATA 24 ITEM PROFIL
   const masterProfil = [
-    { dim: 'keimanan dan ketakwaan terhadap Tuhan Yang Maha Esa', sub: 'Hubungan dengan Tuhan Yang Maha Esa' },
-    { dim: 'keimanan dan ketakwaan terhadap Tuhan Yang Maha Esa', sub: 'Hubungan dengan sesama manusia' },
-    { dim: 'keimanan dan ketakwaan terhadap Tuhan Yang Maha Esa', sub: 'Hubungan dengan Lingkungan Alam' },
-    { dim: 'kewargaan', sub: 'Kewargaan Lokal' },
-    { dim: 'kewargaan', sub: 'Kewargaan Nasional' },
-    { dim: 'kewargaan', sub: 'Kewargaan Global' },
-    { dim: 'penalaran kritis', sub: 'Penyampaian Argumentasi' },
-    { dim: 'penalaran kritis', sub: 'Pengambilan Keputusan' },
-    { dim: 'penalaran kritis', sub: 'Penyelesaian Masalah' },
-    { dim: 'kreativitas', sub: 'Gagasan baru' },
-    { dim: 'kreativitas', sub: 'Fleksibilitas berpikir' },
-    { dim: 'kreativitas', sub: 'Karya' },
-    { dim: 'kemandirian', sub: 'Bertanggung Jawab' },
-    { dim: 'kemandirian', sub: 'Kepemimpinan' },
-    { dim: 'kemandirian', sub: 'Pengembangan Diri' },
-    { dim: 'kolaborasi', sub: 'Berbagi' },
-    { dim: 'kolaborasi', sub: 'Kerja sama' },
-    { dim: 'komunikasi', sub: 'Menyimak' },
-    { dim: 'komunikasi', sub: 'Berbicara' },
-    { dim: 'komunikasi', sub: 'Membaca' },
-    { dim: 'komunikasi', sub: 'Menulis' },
-    { dim: 'kesehatan', sub: 'Hidup bersih dan sehat' },
-    { dim: 'kesehatan', sub: 'Kebugaran, kesehatan fisik, dan kesehatan mental' },
-    { dim: 'kesehatan', sub: 'Prinsip keselamatan dan kesehatan kerja (K3) di dunia kerja' },
+    { dim: 'Beriman, bertakwa kepada Tuhan YME, dan berakhlak mulia', sub: 'Hubungan dengan Tuhan Yang Maha Esa' },
+    { dim: 'Beriman, bertakwa kepada Tuhan YME, dan berakhlak mulia', sub: 'Hubungan dengan sesama manusia' },
+    { dim: 'Beriman, bertakwa kepada Tuhan YME, dan berakhlak mulia', sub: 'Hubungan dengan Lingkungan Alam' },
+    { dim: 'Berkebinekaan global', sub: 'Kewargaan Lokal' },
+    { dim: 'Berkebinekaan global', sub: 'Kewargaan Nasional' },
+    { dim: 'Berkebinekaan global', sub: 'Kewargaan Global' },
+    { dim: 'Bernalar kritis', sub: 'Penyampaian Argumentasi' },
+    { dim: 'Bernalar kritis', sub: 'Pengambilan Keputusan' },
+    { dim: 'Bernalar kritis', sub: 'Penyelesaian Masalah' },
+    { dim: 'Kreatif', sub: 'Gagasan baru' },
+    { dim: 'Kreatif', sub: 'Fleksibilitas berpikir' },
+    { dim: 'Kreatif', sub: 'Karya' },
+    { dim: 'Mandiri', sub: 'Bertanggung Jawab' },
+    { dim: 'Mandiri', sub: 'Kepemimpinan' },
+    { dim: 'Mandiri', sub: 'Pengembangan Diri' },
+    { dim: 'Gotong royong', sub: 'Berbagi' },
+    { dim: 'Gotong royong', sub: 'Kerja sama' },
+    { dim: 'Komunikasi', sub: 'Menyimak' },
+    { dim: 'Komunikasi', sub: 'Berbicara' },
+    { dim: 'Komunikasi', sub: 'Membaca' },
+    { dim: 'Komunikasi', sub: 'Menulis' },
+    { dim: 'Kesehatan', sub: 'Hidup bersih dan sehat' },
+    { dim: 'Kesehatan', sub: 'Kebugaran, kesehatan fisik, dan kesehatan mental' },
+    { dim: 'Kesehatan', sub: 'Prinsip keselamatan dan kesehatan kerja (K3) di dunia kerja' },
   ];
 
-  useEffect(() => {
-    if (profile) fetchData();
-  }, [profile]);
+  useEffect(() => { if (profile) fetchData(); }, [profile]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -67,7 +72,6 @@ export default function MasterKegiatanKokurikuler() {
     setLoading(false);
   };
 
-  // --- LOGIKA UTAMA DISPLAY ---
   const displayData = themes.map((theme, i) => {
     const act = activities.find(a => a.theme_id === theme.id);
     return {
@@ -77,27 +81,52 @@ export default function MasterKegiatanKokurikuler() {
         activity_name: act?.activity_name || theme.name,
         final_objective: act?.final_objective || '',
         nomor_urut: act?.nomor_urut || i + 1,
+        graduate_profile: act?.graduate_profile || [],
         is_empty: !act
     };
   });
 
-  // --- FUNGSI SAVE/UPDATE KEGIATAN ---
+  // Sinkronisasi otomatis tetap ada sebagai cadangan
+  const syncGraduateProfile = async (activityId: string) => {
+    try {
+      const [themesRes, profsRes] = await Promise.all([
+        supabase.from('kokurikuler_themes').select('id, name'),
+        supabase.from('activity_profiles').select('dimension').eq('activity_id', activityId)
+      ]);
+
+      const freshThemes = themesRes.data || [];
+      const selectedProfs = profsRes.data || [];
+
+      if (selectedProfs.length > 0) {
+        const selectedStrings = Array.from(new Set(selectedProfs.map(p => p.dimension.toLowerCase().trim())));
+        const dimensionIds = freshThemes
+          .filter(t => {
+            const themeName = t.name.toLowerCase().trim();
+            return selectedStrings.some(sel => sel.includes(themeName) || themeName.includes(sel.substring(0, 5)));
+          })
+          .map(t => t.id);
+
+        await supabase.from('kokurikuler_activities').update({ graduate_profile: dimensionIds }).eq('id', activityId);
+      }
+      fetchData();
+    } catch (err) { console.error(err); }
+  };
+
   const handleSave = async () => {
     const payload = {
         theme_id: formData.theme_id,
         activity_name: formData.activity_name,
         final_objective: formData.final_objective,
         nomor_urut: formData.nomor_urut,
+        graduate_profile: formData.graduate_profile, // UPDATE: Kirim ID terpilih
         fase: 'Fase E'
     };
-
     let res;
     if (formData.id) {
         res = await supabase.from('kokurikuler_activities').update(payload).eq('id', formData.id);
     } else {
         res = await supabase.from('kokurikuler_activities').insert([payload]);
     }
-
     if (!res.error) {
         alert("✅ Data Berhasil Disimpan!");
         setModalOpen(false);
@@ -105,20 +134,14 @@ export default function MasterKegiatanKokurikuler() {
     }
   };
 
-  // --- FUNGSI HAPUS KEGIATAN ---
   const handleDeleteActivity = async (id: string, isEmpty: boolean) => {
     if (isEmpty) return alert("Baris ini belum disimpan ke database.");
     if (confirm("🚨 Hapus kegiatan ini? Semua capaian profil juga akan terhapus.")) {
       const { error } = await supabase.from('kokurikuler_activities').delete().eq('id', id);
-      if (!error) {
-        alert("✅ Terhapus!");
-        fetchData();
-        setActiveMenu(null);
-      }
+      if (!error) { alert("✅ Terhapus!"); fetchData(); setActiveMenu(null); }
     }
   };
 
-  // --- FUNGSI PROFIL LULUSAN ---
   const openProfilModal = async (item: any) => {
     if (item.is_empty) return alert("Simpan kegiatan dulu sebelum mengatur profil!");
     setSelectedSub(item);
@@ -140,21 +163,24 @@ export default function MasterKegiatanKokurikuler() {
     if (!error) {
         setSavedProfiles([...savedProfiles, data[0]]);
         setSelectProfileOpen(false);
+        await syncGraduateProfile(selectedSub.id);
     }
   };
 
   const deleteCapaian = async (id: string) => {
     const { error } = await supabase.from('activity_profiles').delete().eq('id', id);
-    if (!error) setSavedProfiles(savedProfiles.filter(p => p.id !== id));
+    if (!error) {
+        setSavedProfiles(savedProfiles.filter(p => p.id !== id));
+        await syncGraduateProfile(selectedSub.id);
+    }
   };
 
   if (!profile) return <div className="p-20 text-center font-black opacity-20 uppercase">Syncing Profile...</div>;
 
   return (
     <div className="space-y-8 p-4 animate-in fade-in duration-700">
-      <h1 className="text-3xl font-black uppercase tracking-tighter  px-4">Kegiatan <span className="text-blue-600">Kokurikuler</span></h1>
+      <h1 className="text-3xl font-black uppercase tracking-tighter px-4">Kegiatan <span className="text-blue-600">Kokurikuler</span></h1>
 
-      {/* TABLE */}
       <div className={`${cur.card} border ${cur.border} rounded-[3rem] shadow-sm relative overflow-visible`}>
         <table className="w-full text-left">
           <thead>
@@ -176,10 +202,21 @@ export default function MasterKegiatanKokurikuler() {
                   <div className="flex justify-end gap-2 items-center">
                     <button onClick={() => setActiveMenu(activeMenu === item.id ? null : item.id)} className={`p-2 rounded-xl transition-all ${activeMenu === item.id ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-900 hover:bg-gray-500/10'}`}><IconGear /></button>
                   </div>
-
                   {activeMenu === item.id && (
                     <div className={`absolute right-10 top-14 w-56 rounded-2xl border ${cur.border} ${cur.card} shadow-2xl z-[100] py-2 animate-in fade-in slide-in-from-top-2 overflow-hidden`}>
-                      <button onClick={() => { setSelectedSub(item); setFormData({ id: item.is_empty ? '' : item.id, theme_id: item.theme_id, activity_name: item.activity_name, final_objective: item.final_objective, nomor_urut: item.nomor_urut }); setModalOpen(true); setActiveMenu(null); }} className="w-full text-left px-5 py-3 text-[11px] font-black uppercase text-gray-900 hover:bg-blue-600 hover:text-white flex items-center gap-3"><IconEdit /> Edit Kegiatan</button>
+                      <button onClick={() => { 
+                        setSelectedSub(item); 
+                        setFormData({ 
+                          id: item.is_empty ? '' : item.id, 
+                          theme_id: item.theme_id, 
+                          activity_name: item.activity_name, 
+                          final_objective: item.final_objective, 
+                          nomor_urut: item.nomor_urut,
+                          graduate_profile: item.graduate_profile || [] // Load data existing
+                        }); 
+                        setModalOpen(true); 
+                        setActiveMenu(null); 
+                      }} className="w-full text-left px-5 py-3 text-[11px] font-black uppercase text-gray-900 hover:bg-blue-600 hover:text-white flex items-center gap-3"><IconEdit /> Edit Kegiatan</button>
                       <button onClick={() => openProfilModal(item)} className="w-full text-left px-5 py-3 text-[11px] font-black uppercase text-gray-900 hover:bg-blue-600 hover:text-white flex items-center gap-3"><span className="text-sm font-black">+</span> Profil Lulusan</button>
                       <button onClick={() => handleDeleteActivity(item.id, item.is_empty)} className="w-full text-left px-5 py-3 text-[11px] font-black uppercase text-red-500 hover:bg-red-600 hover:text-white flex items-center gap-3 border-t"><IconTrash /> Hapus</button>
                     </div>
@@ -195,7 +232,7 @@ export default function MasterKegiatanKokurikuler() {
       {isModalOpen && (
         <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`${cur.card} w-full max-w-2xl rounded-[3rem] border ${cur.border} shadow-2xl overflow-hidden`}>
-            <div className="p-8 border-b ${cur.border} flex justify-between items-center bg-gray-500/5 uppercase font-black">
+            <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-500/5 uppercase font-black">
               <h2 className="text-[11px]">Edit Kegiatan: {selectedSub?.theme_name}</h2>
               <button onClick={() => setModalOpen(false)} className="text-2xl text-gray-900">×</button>
             </div>
@@ -203,18 +240,42 @@ export default function MasterKegiatanKokurikuler() {
                <div className="grid grid-cols-4 gap-6 items-center">
                   <label className="col-span-1 text-gray-900">Nomor Urut</label>
                   <span>:</span>
-                  <input type="number" value={formData.nomor_urut} onChange={(e) => setFormData({...formData, nomor_urut: parseInt(e.target.value) || 0})} className={`col-span-2 border ${cur.border} rounded-2xl p-4 ${cur.bg} text-gray-900 font-bold outline-none focus:border-blue-600`} />
+                  <input type="number" value={formData.nomor_urut} onChange={(e) => setFormData({...formData, nomor_urut: parseInt(e.target.value) || 0})} className={`col-span-2 border ${cur.border} rounded-2xl p-4 text-gray-900 font-bold outline-none focus:border-blue-600`} />
                </div>
                <div className="grid grid-cols-4 gap-6 items-center">
                   <label className="col-span-1 text-gray-900">Nama Kegiatan</label>
                   <span>:</span>
-                  <input type="text" value={formData.activity_name} onChange={(e) => setFormData({...formData, activity_name: e.target.value})} className={`col-span-2 border ${cur.border} rounded-2xl p-4 ${cur.bg} text-gray-900 font-bold outline-none focus:border-blue-600`} />
+                  <input type="text" value={formData.activity_name} onChange={(e) => setFormData({...formData, activity_name: e.target.value})} className={`col-span-2 border ${cur.border} rounded-2xl p-4 text-gray-900 font-bold outline-none focus:border-blue-600`} />
                </div>
                <div className="grid grid-cols-4 gap-6 items-start">
                   <label className="col-span-1 pt-4 text-gray-900">Tujuan Akhir</label>
                   <span className="pt-4">:</span>
-                  <textarea rows={5} value={formData.final_objective} onChange={(e) => setFormData({...formData, final_objective: e.target.value})} className={`col-span-2 border ${cur.border} rounded-2xl p-5 ${cur.bg} text-gray-900 font-bold resize-none outline-none focus:border-blue-600`} />
+                  <textarea rows={3} value={formData.final_objective} onChange={(e) => setFormData({...formData, final_objective: e.target.value})} className={`col-span-2 border ${cur.border} rounded-2xl p-5 text-gray-900 font-bold resize-none outline-none focus:border-blue-600`} />
                </div>
+
+               {/* UPDATE: CHECKLIST DIMENSI LANGSUNG DI MODAL EDIT */}
+               <div className="grid grid-cols-4 gap-6 items-start">
+                  <label className="col-span-1 pt-4 text-gray-900">Dimensi Projek</label>
+                  <span className="pt-4">:</span>
+                  <div className="col-span-2 grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-4 border rounded-[2rem] bg-gray-50/50">
+                    {themes.map(t => (
+                      <label key={t.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-xl cursor-pointer transition-all border border-transparent hover:border-gray-100">
+                        <input 
+                          type="checkbox" 
+                          checked={formData.graduate_profile?.includes(t.id)}
+                          onChange={(e) => {
+                            const current = formData.graduate_profile || [];
+                            const next = e.target.checked ? [...current, t.id] : current.filter(id => id !== t.id);
+                            setFormData({...formData, graduate_profile: next});
+                          }}
+                          className="w-4 h-4 rounded-lg accent-blue-600"
+                        />
+                        <span className="text-[10px] font-black uppercase text-gray-600">{t.name}</span>
+                      </label>
+                    ))}
+                  </div>
+               </div>
+
                <div className="flex justify-end gap-4 pt-8">
                   <button onClick={() => setModalOpen(false)} className="bg-slate-900 text-white px-10 py-4 rounded-2xl font-black text-[10px] uppercase">Close</button>
                   <button onClick={handleSave} className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black text-[10px] uppercase shadow-xl shadow-blue-600/30">Simpan</button>
@@ -224,11 +285,11 @@ export default function MasterKegiatanKokurikuler() {
         </div>
       )}
 
-      {/* MODAL 2: PROFIL LULUSAN (FUNCTIONAL) */}
+      {/* MODAL PROFIL LULUSAN TETAP ADA UNTUK DETAIL SUBDIMENSI */}
       {isProfilModalOpen && (
         <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`${cur.card} w-full max-w-5xl rounded-[3rem] border ${cur.border} shadow-2xl overflow-hidden flex flex-col max-h-[85vh]`}>
-             <div className="p-8 border-b ${cur.border} flex justify-between items-center bg-gray-500/5">
+             <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-500/5">
                 <h2 className="text-xl font-black uppercase text-gray-900">Profil Lulusan pada Kegiatan <span className="text-blue-600 ">{selectedSub?.activity_name}</span></h2>
                 <button onClick={() => setProfilModalOpen(false)} className="text-3xl text-gray-900">×</button>
              </div>
@@ -258,18 +319,18 @@ export default function MasterKegiatanKokurikuler() {
                             </td>
                          </tr>
                       ))}
-                      {savedProfiles.length === 0 && <tr><td colSpan={4} className="p-10 text-center opacity-40 font-black  uppercase">Belum ada capaian.</td></tr>}
+                      {savedProfiles.length === 0 && <tr><td colSpan={4} className="p-10 text-center opacity-40 font-black uppercase">Belum ada capaian.</td></tr>}
                    </tbody>
                 </table>
              </div>
-             <div className="p-8 border-t ${cur.border} flex justify-end">
+             <div className="p-8 border-t border-gray-100 flex justify-end">
                 <button onClick={() => setProfilModalOpen(false)} className="bg-slate-900 text-white px-10 py-3.5 rounded-2xl font-black text-[10px] uppercase">Close</button>
              </div>
           </div>
         </div>
       )}
 
-      {/* POPUP SELECTION (Pilih dari 24 item) */}
+      {/* POPUP SELECTION */}
       {isSelectProfileOpen && (
         <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`${cur.card} w-full max-w-2xl rounded-[2.5rem] border ${cur.border} p-8 shadow-2xl max-h-[80vh] flex flex-col`}>

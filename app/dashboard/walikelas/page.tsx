@@ -1,114 +1,181 @@
 "use client";
-import React, { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTheme } from '../layout';
+import React, { useState, useEffect } from 'react';
+import { useTheme } from '@/app/dashboard/guru/layout'; // Mengambil style Samsung dari layout guru
+import { supabase } from '@/lib/supabase';
 
-// --- ICONS KHUSUS WALIKELAS ---
-const IconAbsen = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" y1="8" x2="23" y2="8"></line><line x1="17" y1="12" x2="23" y2="12"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>;
-const IconSiswa = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>;
-const IconRapor = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>;
+// --- ICONS (KONSISTEN SAMSUNG STYLE) ---
+const IconChart = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>;
+const IconUsers = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>;
+const IconEdit = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
+const IconPrinter = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>;
+const IconSettings = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 
-export default function WalikelasPage() {
-  const router = useRouter();
-  const { cur, profile, loading } = useTheme();
+export default function WalikelasDashboard() {
+  const { cur, profile } = useTheme();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    className: '',
+    attendanceRate: 0,
+    gradesCompletion: 0
+  });
 
-  // --- SECURITY GATE: HANYA WALIKELAS/ADMIN ---
   useEffect(() => {
-    if (!loading && profile) {
-      const userRoles = profile.roles || [profile.role];
-      const isWalikelas = userRoles.some((r: string) => r?.toLowerCase() === 'walikelas' || r?.toLowerCase() === 'admin');
-      
-      if (!isWalikelas) {
-        const target = userRoles[0]?.toLowerCase() || 'siswa';
-        router.push(`/dashboard/${target}`);
-      }
-    }
-  }, [profile, loading, router]);
+    if (profile) fetchWalikelasData();
+  }, [profile]);
 
-  if (loading || !profile) return <div className={`min-h-screen ${cur.bg} flex items-center justify-center font-black italic opacity-20 uppercase tracking-widest`}>Memuat Data Kelas...</div>;
+  const fetchWalikelasData = async () => {
+    setLoading(true);
+    try {
+      // 1. Cari kelas di mana Guru ini adalah Walikelasnya
+      const { data: classInfo } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('walikelas_id', profile.id)
+        .single();
+
+      if (classInfo) {
+        // 2. Hitung jumlah siswa di kelas tersebut
+        const { count } = await supabase
+          .from('class_students')
+          .select('*', { count: 'exact', head: true })
+          .eq('class_id', classInfo.id);
+
+        setStats({
+          totalStudents: count || 0,
+          className: classInfo.nama_kelas,
+          attendanceRate: 98, // Mock data atau tarik dari attendance_records
+          gradesCompletion: 85 // Mock data
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
-      {/* Header Profile Walikelas */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tighter italic">Dashboard Walikelas</h1>
-          <p className={`${cur.textMuted} text-sm font-medium`}>Halo, {profile.full_name}. Selamat memantau perkembangan anak didik Anda.</p>
+    <div className="space-y-10 p-4 md:p-8 animate-in fade-in duration-700">
+      {/* HEADER GREETING */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 px-2">
+        <div className="space-y-1">
+          <h1 className="text-5xl font-black uppercase tracking-tighter italic leading-none">
+            Halo, <span className="text-blue-600">{profile?.full_name?.split(' ')[0]}!</span>
+          </h1>
+          <p className="text-[10px] font-black opacity-40 uppercase tracking-[0.4em]">
+            Dashboard Wali Kelas • {stats.className || 'Memuat Kelas...'}
+          </p>
         </div>
-        <div className={`px-6 py-2 rounded-2xl border ${cur.border} ${cur.card} flex items-center gap-3`}>
-            <div className="w-2 h-2 rounded-full bg-blue-600 animate-ping"></div>
-            <span className="text-[10px] font-black uppercase tracking-widest italic">Kelas XI RPL 1</span>
-        </div>
-      </div>
-
-      {/* Widget Utama Walikelas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[
-          { label: 'Jumlah Siswa', value: '36', sub: '20 Laki-laki / 16 Perempuan', icon: <IconSiswa />, color: 'bg-blue-600' },
-          { label: 'Kehadiran Hari Ini', value: '98%', sub: '1 Siswa Sakit (Budi)', icon: <IconAbsen />, color: 'bg-green-600' },
-          { label: 'Status Rapor', value: '12/36', sub: 'Siswa Selesai Dinilai', icon: <IconRapor />, color: 'bg-purple-600' },
-        ].map((item, i) => (
-          <div key={i} className={`${cur.card} p-8 rounded-[2.5rem] border ${cur.border} shadow-sm group hover:-translate-y-1 transition-all duration-500`}>
-            <div className="flex items-center justify-between mb-4">
-              <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${cur.textMuted}`}>{item.label}</span>
-              <div className={`w-10 h-10 ${item.color} text-white rounded-xl flex items-center justify-center shadow-lg transition-transform group-hover:rotate-12`}>
-                {item.icon}
-              </div>
-            </div>
-            <h4 className="text-4xl font-black tracking-tighter mb-1 italic">{item.value}</h4>
-            <p className="text-[10px] font-bold opacity-40 uppercase tracking-tight">{item.sub}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tugas Walikelas Quick Links */}
-        <div className={`${cur.card} rounded-[2.5rem] border ${cur.border} p-8 space-y-4`}>
-          <h4 className="font-black text-sm uppercase tracking-widest italic mb-2">Manajemen Kelas</h4>
-          <div className="grid grid-cols-2 gap-3">
-            <button className={`p-4 rounded-2xl border ${cur.border} ${cur.hover} text-left transition-all`}>
-              <p className="text-[10px] font-black opacity-30 uppercase mb-1">Daftar</p>
-              <p className="text-xs font-black">Data Siswa</p>
-            </button>
-            <button className={`p-4 rounded-2xl border ${cur.border} ${cur.hover} text-left transition-all`}>
-              <p className="text-[10px] font-black opacity-30 uppercase mb-1">Laporan</p>
-              <p className="text-xs font-black">Absensi Bulanan</p>
-            </button>
-            <button className={`p-4 rounded-2xl border ${cur.border} ${cur.hover} text-left transition-all`}>
-              <p className="text-[10px] font-black opacity-30 uppercase mb-1">Input</p>
-              <p className="text-xs font-black">Catatan Wali</p>
-            </button>
-            <button className={`p-4 rounded-2xl border ${cur.border} ${cur.hover} text-left transition-all`}>
-              <p className="text-[10px] font-black opacity-30 uppercase mb-1">Cetak</p>
-              <p className="text-xs font-black">Leger Nilai</p>
-            </button>
-          </div>
-        </div>
-
-        {/* Notifikasi / Warning */}
-        <div className={`bg-orange-500/10 border border-orange-500/20 rounded-[2.5rem] p-8`}>
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-orange-500 rounded-2xl flex items-center justify-center text-white">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </div>
-                <h4 className="font-black text-sm uppercase tracking-widest italic">Perhatian Wali</h4>
-            </div>
-            <ul className="space-y-4">
-                <li className="flex items-start gap-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5"></span>
-                    <p className="text-sm font-medium opacity-80 leading-tight">3 Siswa belum melunasi iuran Tabungan PKL.</p>
-                </li>
-                <li className="flex items-start gap-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5"></span>
-                    <p className="text-sm font-medium opacity-80 leading-tight">Siswa atas nama **Rendi** sudah 3 hari tidak masuk tanpa keterangan.</p>
-                </li>
-            </ul>
+        <div className="bg-gray-500/5 px-6 py-3 rounded-2xl border border-gray-500/10">
+            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Tahun Ajaran</p>
+            <p className="text-sm font-black uppercase">2025/2026</p>
         </div>
       </div>
 
-      <div className="text-center pt-8">
-        <p className="text-[9px] font-black uppercase tracking-[0.5em] opacity-20 italic">Dashboard Walikelas • Portal SIMARA</p>
+      {/* STATS OVERVIEW GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard label="Total Siswa" value={stats.totalStudents} sub="Aktif di Kelas" icon={<IconUsers />} color="blue" />
+        <StatCard label="Kehadiran" value={`${stats.attendanceRate}%`} sub="Rata-rata Pekan Ini" icon={<IconChart />} color="green" />
+        <StatCard label="Progres Nilai" value={`${stats.gradesCompletion}%`} sub="Selesai Diinput" icon={<IconEdit />} color="purple" />
+        <StatCard label="Status Rapor" value="Siap" sub="Cetak Rapor Biasa" icon={<IconPrinter />} color="orange" />
+      </div>
+
+      {/* QUICK ACCESS MENU GRID (Sesuai Permintaan) */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3 px-2">
+           <div className="h-px flex-1 bg-gray-500/10"></div>
+           <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Navigasi Utama</span>
+           <div className="h-px flex-1 bg-gray-500/10"></div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* MENU PENILAIAN */}
+          <MenuCard 
+            title="Penilaian Kelas" 
+            desc="Kelola Nilai, Ekskul, Absensi, dan Catatan"
+            icon={<IconEdit />}
+            color="blue"
+            submenus={[
+              { name: "Penilaian", link: "/dashboard/walikelas/penilaian" },
+              { name: "Ekstrakulikuler", link: "/dashboard/walikelas/ekskul" },
+              { name: "Absensi", link: "/dashboard/walikelas/absensi" },
+              { name: "Catatan Wali Kelas", link: "/dashboard/walikelas/catatan" }
+            ]}
+          />
+
+          {/* MENU CETAK RAPOR */}
+          <MenuCard 
+            title="Master Cetak Rapor" 
+            desc="Unduh dan Cetak Laporan Hasil Belajar Siswa"
+            icon={<IconPrinter />}
+            color="purple"
+            submenus={[
+              { name: "Rapor Biasa", link: "/dashboard/walikelas/rapor" }
+            ]}
+          />
+
+          {/* MENU PENGATURAN */}
+          <MenuCard 
+            title="Pengaturan" 
+            desc="Kelola Profil dan Preferensi Dashboard"
+            icon={<IconSettings />}
+            color="gray"
+            submenus={[
+              { name: "Profil Saya", link: "/dashboard/walikelas/pengaturan/profil" },
+              { name: "Keamanan", link: "/dashboard/walikelas/pengaturan/keamanan" }
+            ]}
+          />
+        </div>
       </div>
     </div>
   );
+}
+
+// --- SUB-COMPONENTS (SAMSUNG STYLE) ---
+
+function StatCard({ label, value, sub, icon, color }: any) {
+    const colors: any = {
+        blue: 'text-blue-600 bg-blue-600/10',
+        green: 'text-green-600 bg-green-600/10',
+        purple: 'text-purple-600 bg-purple-600/10',
+        orange: 'text-orange-600 bg-orange-600/10',
+    };
+    return (
+        <div className={`bg-white border border-gray-100 p-8 rounded-[3rem] shadow-xl shadow-black/5 flex flex-col justify-between min-h-[200px] hover:-translate-y-2 transition-all duration-500`}>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${colors[color]}`}>{icon}</div>
+            <div className="mt-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{label}</p>
+                <p className="text-4xl font-black tracking-tighter text-gray-900">{value}</p>
+                <p className="text-[9px] font-bold text-gray-400 mt-1">{sub}</p>
+            </div>
+        </div>
+    );
+}
+
+function MenuCard({ title, desc, icon, color, submenus }: any) {
+    const colors: any = {
+        blue: 'bg-blue-600 shadow-blue-600/20',
+        purple: 'bg-purple-600 shadow-purple-600/20',
+        gray: 'bg-slate-900 shadow-slate-900/20',
+    };
+    return (
+        <div className="bg-white border border-gray-100 rounded-[3.5rem] p-10 shadow-2xl space-y-8 flex flex-col">
+            <div className="flex items-center gap-6">
+                <div className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center text-white shadow-xl ${colors[color]}`}>{icon}</div>
+                <div>
+                    <h3 className="text-xl font-black uppercase tracking-tighter">{title}</h3>
+                    <p className="text-[9px] font-bold text-gray-400 leading-tight mt-1">{desc}</p>
+                </div>
+            </div>
+            <div className="grid grid-cols-1 gap-2">
+                {submenus.map((m: any, i: number) => (
+                    <a key={i} href={m.link} className="w-full text-left p-4 rounded-2xl bg-gray-50 hover:bg-blue-600 hover:text-white transition-all duration-300 flex justify-between items-center group">
+                        <span className="text-[11px] font-black uppercase tracking-wider">{m.name}</span>
+                        <svg className="opacity-0 group-hover:opacity-100 transition-all" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                ))}
+            </div>
+        </div>
+    );
 }
